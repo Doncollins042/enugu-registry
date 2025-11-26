@@ -1,186 +1,101 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Home, LogOut, Bell, CreditCard, Bitcoin, Lock, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+  ArrowLeft, CreditCard, Building2, Smartphone, Bitcoin, 
+  Copy, CheckCircle, Clock, Shield, AlertCircle, X
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
-interface PaymentPageProps {
-  user: any;
-  onLogout: () => void;
-  plot: any;
-  estate: any;
-  onPurchase: (property: any) => void;
-}
-
-export default function PaymentPage({ user, onLogout, plot, estate, onPurchase }: PaymentPageProps) {
+export default function PaymentPage() {
   const navigate = useNavigate();
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const location = useLocation();
+  const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [processing, setProcessing] = useState(false);
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [purchaseDetails, setPurchaseDetails] = useState<any>(null);
-  const [cardDetails, setCardDetails] = useState({
-    cardNumber: '',
-    expiry: '',
-    cvv: '',
-    cardHolder: ''
-  });
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
-  const plotPrice = plot?.price || 5000000;
-  const fees = {
-    legal: 150000,
-    survey: 80000,
-    registration: 50000,
-    documentation: 30000
-  };
-  const totalAmount = plotPrice + fees.legal + fees.survey + fees.registration + fees.documentation;
-
-  const validateCard = () => {
-    if (!cardDetails.cardNumber || cardDetails.cardNumber.replace(/\s/g, '').length < 16) {
-      toast.error('Please enter a valid card number');
-      return false;
-    }
-    if (!cardDetails.expiry || !/^\d{2}\/\d{2}$/.test(cardDetails.expiry)) {
-      toast.error('Please enter a valid expiry date (MM/YY)');
-      return false;
-    }
-    if (!cardDetails.cvv || cardDetails.cvv.length < 3) {
-      toast.error('Please enter a valid CVV');
-      return false;
-    }
-    if (!cardDetails.cardHolder.trim()) {
-      toast.error('Please enter the cardholder name');
-      return false;
-    }
-    return true;
+  // Get payment details from navigation state or use defaults
+  const paymentDetails = location.state || {
+    type: 'Property Purchase',
+    amount: 8500000,
+    description: 'Plot A-15, Legacy Estate',
+    reference: 'TXN' + Date.now()
   };
 
-  const handlePayment = () => {
-    if (paymentMethod === 'card' && !validateCard()) {
+  const bankDetails = {
+    bankName: 'First Bank of Nigeria',
+    accountName: 'Enugu State Land Registry',
+    accountNumber: '2034567890',
+    sortCode: '011151234'
+  };
+
+  const cryptoDetails = {
+    bitcoin: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
+    usdt: 'TXqHLkJ9VbMRwK8fYz2nP3xUQmVy5GdZc1',
+    ethereum: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD58'
+  };
+
+  const formatCurrency = (amount: number) => {
+    return '₦' + amount.toLocaleString();
+  };
+
+  const handleCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard!`);
+  };
+
+  const handlePaymentSubmit = () => {
+    if (!paymentMethod) {
+      toast.error('Please select a payment method');
       return;
     }
-
     setProcessing(true);
-    toast.loading('Processing your payment...', { id: 'payment' });
-
-    // Simulate payment processing
     setTimeout(() => {
-      toast.dismiss('payment');
-      
-      const property = {
-        id: Math.random().toString(36).substr(2, 9),
-        plotNumber: plot?.id || 'LP-001',
-        estateName: estate?.name || 'Legacy Estate',
-        size: plot?.size || '500sqm',
-        price: plotPrice,
-        titleNumber: `EN/TN/${Date.now()}`,
-        blockchainTxId: `0x${Math.random().toString(36).substr(2, 16)}${Math.random().toString(36).substr(2, 16)}`,
-        purchaseDate: new Date().toISOString()
-      };
-
-      setPurchaseDetails({
-        ...property,
-        transactionId: `TXN-${Date.now()}`,
-        paymentMethod: paymentMethod === 'card' ? 'Credit/Debit Card' : 'Cryptocurrency',
-        totalPaid: totalAmount,
-        receiptNumber: `RCP-${Date.now()}`
-      });
-      
-      onPurchase(property);
-      setPaymentSuccess(true);
       setProcessing(false);
-      
-      toast.success('🎉 Congratulations! Payment successful!');
-    }, 3000);
+      setShowConfirmation(true);
+    }, 2000);
   };
 
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || '';
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    return parts.length ? parts.join(' ') : value;
-  };
+  const paymentMethods = [
+    { id: 'bank', name: 'Bank Transfer', icon: Building2, description: 'Direct bank transfer' },
+    { id: 'card', name: 'Card Payment', icon: CreditCard, description: 'Debit/Credit card' },
+    { id: 'ussd', name: 'USSD', icon: Smartphone, description: 'Pay with USSD code' },
+    { id: 'crypto', name: 'Cryptocurrency', icon: Bitcoin, description: 'BTC, USDT, ETH' },
+  ];
 
-  if (paymentSuccess && purchaseDetails) {
+  if (showConfirmation) {
     return (
-      <div className="min-h-screen bg-gray-50 relative">
-        <div className="fixed inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-gray-50/98 to-white/95 z-10"></div>
-          <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1920&q=80" alt="Property" className="w-full h-full object-cover opacity-20 blur-md" />
-        </div>
-
-        <div className="relative z-20 min-h-screen flex items-center justify-center p-4">
-          <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-8 sm:p-12 shadow-xl max-w-2xl w-full text-center">
-            <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="w-16 h-16 text-emerald-600" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
+          <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-10 h-10 text-emerald-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Submitted!</h2>
+          <p className="text-gray-600 mb-6">Your payment is being processed. You will receive a confirmation once verified.</p>
+          
+          <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-600">Reference:</span>
+              <span className="font-medium">{paymentDetails.reference}</span>
             </div>
-            
-            <h1 className="text-3xl font-bold text-gray-900 mb-3">🎉 Congratulations!</h1>
-            <p className="text-lg text-gray-600 mb-8">
-              You are now the proud owner of <span className="font-bold text-blue-900">{purchaseDetails.plotNumber}</span> in {purchaseDetails.estateName}!
-            </p>
-
-            <div className="bg-gray-50 rounded-lg p-6 mb-8 text-left">
-              <h3 className="text-sm font-bold text-gray-900 mb-4 text-center">Purchase Receipt</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-sm text-gray-600">Receipt Number:</span>
-                  <span className="text-sm font-mono font-bold text-gray-900">{purchaseDetails.receiptNumber}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-sm text-gray-600">Transaction ID:</span>
-                  <span className="text-sm font-mono text-gray-900">{purchaseDetails.transactionId}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-sm text-gray-600">Property:</span>
-                  <span className="text-sm text-gray-900">{purchaseDetails.plotNumber} ({purchaseDetails.size})</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-sm text-gray-600">Estate:</span>
-                  <span className="text-sm text-gray-900">{purchaseDetails.estateName}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-sm text-gray-600">Title Number:</span>
-                  <span className="text-sm font-mono text-gray-900">{purchaseDetails.titleNumber}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-sm text-gray-600">Payment Method:</span>
-                  <span className="text-sm text-gray-900">{purchaseDetails.paymentMethod}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-sm text-gray-600">Amount Paid:</span>
-                  <span className="text-lg font-bold text-emerald-600">₦{purchaseDetails.totalPaid.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between py-2">
-                  <span className="text-sm text-gray-600">Blockchain TX:</span>
-                  <span className="text-xs font-mono text-blue-600 truncate max-w-[200px]">{purchaseDetails.blockchainTxId}</span>
-                </div>
-              </div>
+            <div className="flex justify-between mb-2">
+              <span className="text-gray-600">Amount:</span>
+              <span className="font-medium">{formatCurrency(paymentDetails.amount)}</span>
             </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
-              <p className="text-sm text-blue-900">
-                <strong>What's Next?</strong> Your property documents will be processed within 5-7 business days. 
-                You can track your property and download documents from your Portfolio.
-              </p>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Status:</span>
+              <span className="text-yellow-600 font-medium flex items-center gap-1">
+                <Clock className="w-4 h-4" /> Pending Verification
+              </span>
             </div>
+          </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button
-                onClick={() => navigate('/portfolio')}
-                className="px-6 py-3 bg-blue-900 text-white rounded-lg font-semibold hover:bg-blue-800 transition-all text-sm"
-              >
-                View My Portfolio
-              </button>
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="px-6 py-3 bg-gray-100 border border-gray-300 text-gray-900 rounded-lg font-medium hover:bg-gray-200 transition-all text-sm"
-              >
-                Back to Dashboard
-              </button>
-            </div>
+          <div className="flex gap-3">
+            <button onClick={() => navigate('/dashboard')} className="flex-1 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50">
+              Go to Dashboard
+            </button>
+            <button onClick={() => navigate('/portfolio')} className="flex-1 py-3 bg-blue-900 text-white rounded-lg font-medium hover:bg-blue-800">
+              View Portfolio
+            </button>
           </div>
         </div>
       </div>
@@ -188,231 +103,289 @@ export default function PaymentPage({ user, onLogout, plot, estate, onPurchase }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
-      {/* Blurred Background */}
-      <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-gray-50/98 to-white/95 z-10"></div>
-        <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1920&q=80" alt="Property" className="w-full h-full object-cover opacity-20 blur-md" />
-      </div>
-
-      {/* Content */}
-      <div className="relative z-20">
-        {/* Header */}
-        <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-900 to-blue-700 rounded-lg flex items-center justify-center">
-                  <Home className="w-6 h-6 text-amber-400" />
-                </div>
-                <div>
-                  <h1 className="text-base font-bold text-gray-900">Enugu State Land Registry</h1>
-                  <p className="text-xs text-gray-600">Secure Payment Gateway</p>
-                </div>
-              </div>
-              <button onClick={onLogout} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                <LogOut className="w-5 h-5 text-gray-700" />
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 text-sm">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Plot Details
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
+          <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg">
+            <ArrowLeft className="w-5 h-5" />
           </button>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Payment</h1>
+            <p className="text-sm text-gray-600">Complete your transaction</p>
+          </div>
+        </div>
+      </header>
 
-          <div className="grid lg:grid-cols-3 gap-6">
-            {/* Payment Form */}
-            <div className="lg:col-span-2">
-              <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Payment Method</h2>
-
-                {/* Method Selection */}
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  <button
-                    onClick={() => setPaymentMethod('card')}
-                    disabled={processing}
-                    className={`p-4 border-2 rounded-lg transition-all text-left ${
-                      paymentMethod === 'card' ? 'border-blue-900 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                    } ${processing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <CreditCard className="w-6 h-6 text-blue-900 mb-2" />
-                    <p className="text-sm font-bold text-gray-900">Card Payment</p>
-                    <p className="text-xs text-gray-600">Visa, Mastercard, Verve</p>
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod('crypto')}
-                    disabled={processing}
-                    className={`p-4 border-2 rounded-lg transition-all text-left ${
-                      paymentMethod === 'crypto' ? 'border-blue-900 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                    } ${processing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <Bitcoin className="w-6 h-6 text-blue-900 mb-2" />
-                    <p className="text-sm font-bold text-gray-900">Cryptocurrency</p>
-                    <p className="text-xs text-gray-600">Bitcoin, USDT</p>
-                  </button>
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Payment Methods */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Order Summary Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Order Summary</h2>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Transaction Type</span>
+                  <span className="font-medium">{paymentDetails.type}</span>
                 </div>
-
-                {/* Card Form */}
-                {paymentMethod === 'card' && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Card Number *</label>
-                      <input 
-                        type="text" 
-                        value={cardDetails.cardNumber}
-                        onChange={(e) => setCardDetails({ ...cardDetails, cardNumber: formatCardNumber(e.target.value) })}
-                        maxLength={19}
-                        placeholder="1234 5678 9012 3456" 
-                        disabled={processing}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50" 
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date *</label>
-                        <input 
-                          type="text" 
-                          value={cardDetails.expiry}
-                          onChange={(e) => {
-                            let val = e.target.value.replace(/\D/g, '');
-                            if (val.length >= 2) val = val.slice(0, 2) + '/' + val.slice(2, 4);
-                            setCardDetails({ ...cardDetails, expiry: val });
-                          }}
-                          maxLength={5}
-                          placeholder="MM/YY" 
-                          disabled={processing}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50" 
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">CVV *</label>
-                        <input 
-                          type="password" 
-                          value={cardDetails.cvv}
-                          onChange={(e) => setCardDetails({ ...cardDetails, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                          maxLength={4}
-                          placeholder="123" 
-                          disabled={processing}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50" 
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Cardholder Name *</label>
-                      <input 
-                        type="text" 
-                        value={cardDetails.cardHolder}
-                        onChange={(e) => setCardDetails({ ...cardDetails, cardHolder: e.target.value })}
-                        placeholder="JOHN DOE" 
-                        disabled={processing}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm uppercase disabled:opacity-50" 
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Crypto Form */}
-                {paymentMethod === 'crypto' && (
-                  <div className="text-center py-6">
-                    <div className="w-48 h-48 bg-gray-100 rounded-lg mx-auto mb-4 flex items-center justify-center border-2 border-dashed border-gray-300">
-                      <div className="text-center">
-                        <Bitcoin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-xs text-gray-500">QR Code</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-600 mb-2">Send exact amount to:</p>
-                    <p className="text-xs font-mono bg-gray-100 p-2 rounded select-all">bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</p>
-                    <p className="text-sm font-bold text-gray-900 mt-2">≈ 0.0524 BTC</p>
-                    <p className="text-xs text-gray-500 mt-1">Rate expires in 15:00 minutes</p>
-                  </div>
-                )}
-
-                <button
-                  onClick={handlePayment}
-                  disabled={processing}
-                  className="w-full mt-6 py-3 bg-blue-900 text-white rounded-lg font-semibold hover:bg-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
-                >
-                  {processing ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Processing Payment...
-                    </>
-                  ) : (
-                    <>Pay ₦{totalAmount.toLocaleString()}</>
-                  )}
-                </button>
-
-                <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-600">
-                  <Lock className="w-4 h-4" />
-                  <span>Secured by 256-bit SSL encryption • PCI DSS Compliant</span>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Description</span>
+                  <span className="font-medium">{paymentDetails.description}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Reference</span>
+                  <span className="font-mono text-sm">{paymentDetails.reference}</span>
+                </div>
+                <hr />
+                <div className="flex justify-between text-lg">
+                  <span className="font-bold text-gray-900">Total Amount</span>
+                  <span className="font-bold text-blue-900">{formatCurrency(paymentDetails.amount)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Order Summary */}
-            <div className="lg:col-span-1">
-              <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm sticky top-24">
-                <h3 className="text-base font-bold text-gray-900 mb-4">Order Summary</h3>
-                
-                <div className="space-y-3 mb-4 pb-4 border-b border-gray-200">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Plot Number</span>
-                    <span className="font-medium text-gray-900">{plot?.id || 'LP-001'}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Size</span>
-                    <span className="font-medium text-gray-900">{plot?.size || '500sqm'}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Estate</span>
-                    <span className="font-medium text-gray-900">{estate?.name || 'Legacy Estate'}</span>
-                  </div>
-                </div>
+            {/* Payment Method Selection */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Select Payment Method</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {paymentMethods.map((method) => (
+                  <button
+                    key={method.id}
+                    onClick={() => setPaymentMethod(method.id)}
+                    className={`p-4 border-2 rounded-xl text-left transition-all ${
+                      paymentMethod === method.id
+                        ? 'border-blue-900 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <method.icon className={`w-6 h-6 mb-2 ${paymentMethod === method.id ? 'text-blue-900' : 'text-gray-600'}`} />
+                    <p className="font-medium text-gray-900">{method.name}</p>
+                    <p className="text-xs text-gray-500">{method.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                <div className="space-y-2 mb-4 pb-4 border-b border-gray-200">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Plot Price</span>
-                    <span className="text-gray-900">₦{plotPrice.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Legal Fee</span>
-                    <span className="text-gray-900">₦{fees.legal.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Survey Fee</span>
-                    <span className="text-gray-900">₦{fees.survey.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Registration</span>
-                    <span className="text-gray-900">₦{fees.registration.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Documentation</span>
-                    <span className="text-gray-900">₦{fees.documentation.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-base font-bold text-gray-900">Total Amount</span>
-                  <span className="text-xl font-bold text-emerald-600">₦{totalAmount.toLocaleString()}</span>
-                </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-800">
-                      This transaction is secured with blockchain technology. Your ownership will be permanently recorded.
+            {/* Bank Transfer Details */}
+            {paymentMethod === 'bank' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-4">Bank Transfer Details</h2>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <p className="text-sm text-blue-800">
+                      Transfer the exact amount to the account below. Use the reference number as your transfer narration.
                     </p>
                   </div>
                 </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-sm text-gray-600">Bank Name</p>
+                      <p className="font-medium">{bankDetails.bankName}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-sm text-gray-600">Account Name</p>
+                      <p className="font-medium">{bankDetails.accountName}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-sm text-gray-600">Account Number</p>
+                      <p className="font-bold text-xl text-blue-900">{bankDetails.accountNumber}</p>
+                    </div>
+                    <button onClick={() => handleCopy(bankDetails.accountNumber, 'Account number')} className="p-2 hover:bg-gray-200 rounded-lg">
+                      <Copy className="w-5 h-5 text-gray-600" />
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-sm text-gray-600">Amount to Pay</p>
+                      <p className="font-bold text-xl text-emerald-600">{formatCurrency(paymentDetails.amount)}</p>
+                    </div>
+                    <button onClick={() => handleCopy(paymentDetails.amount.toString(), 'Amount')} className="p-2 hover:bg-gray-200 rounded-lg">
+                      <Copy className="w-5 h-5 text-gray-600" />
+                    </button>
+                  </div>
+                </div>
               </div>
+            )}
+
+            {/* Card Payment */}
+            {paymentMethod === 'card' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-4">Card Details</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
+                    <input type="text" placeholder="1234 5678 9012 3456" maxLength={19} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                      <input type="text" placeholder="MM/YY" maxLength={5} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">CVV</label>
+                      <input type="text" placeholder="123" maxLength={3} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cardholder Name</label>
+                    <input type="text" placeholder="John Doe" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* USSD Payment */}
+            {paymentMethod === 'ussd' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-4">USSD Payment</h2>
+                <p className="text-gray-600 mb-4">Dial the code below on your phone to complete payment:</p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-sm text-gray-600">GTBank</p>
+                      <p className="font-mono text-lg font-bold">*737*50*{paymentDetails.amount}*2034567890#</p>
+                    </div>
+                    <button onClick={() => handleCopy(`*737*50*${paymentDetails.amount}*2034567890#`, 'USSD code')} className="p-2 hover:bg-gray-200 rounded-lg">
+                      <Copy className="w-5 h-5 text-gray-600" />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-sm text-gray-600">First Bank</p>
+                      <p className="font-mono text-lg font-bold">*894*{paymentDetails.amount}#</p>
+                    </div>
+                    <button onClick={() => handleCopy(`*894*${paymentDetails.amount}#`, 'USSD code')} className="p-2 hover:bg-gray-200 rounded-lg">
+                      <Copy className="w-5 h-5 text-gray-600" />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="text-sm text-gray-600">UBA</p>
+                      <p className="font-mono text-lg font-bold">*919*4*2034567890*{paymentDetails.amount}#</p>
+                    </div>
+                    <button onClick={() => handleCopy(`*919*4*2034567890*${paymentDetails.amount}#`, 'USSD code')} className="p-2 hover:bg-gray-200 rounded-lg">
+                      <Copy className="w-5 h-5 text-gray-600" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Crypto Payment */}
+            {paymentMethod === 'crypto' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-4">Cryptocurrency Payment</h2>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                    <p className="text-sm text-yellow-800">
+                      Send the equivalent amount in crypto. Transaction will be confirmed after 3 network confirmations.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Bitcoin className="w-5 h-5 text-orange-500" />
+                      <span className="font-medium">Bitcoin (BTC)</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="font-mono text-xs break-all">{cryptoDetails.bitcoin}</p>
+                      <button onClick={() => handleCopy(cryptoDetails.bitcoin, 'BTC address')} className="p-2 hover:bg-orange-100 rounded-lg">
+                        <Copy className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold">₮</span>
+                      <span className="font-medium">USDT (TRC20)</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="font-mono text-xs break-all">{cryptoDetails.usdt}</p>
+                      <button onClick={() => handleCopy(cryptoDetails.usdt, 'USDT address')} className="p-2 hover:bg-green-100 rounded-lg">
+                        <Copy className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold">Ξ</span>
+                      <span className="font-medium">Ethereum (ETH)</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="font-mono text-xs break-all">{cryptoDetails.ethereum}</p>
+                      <button onClick={() => handleCopy(cryptoDetails.ethereum, 'ETH address')} className="p-2 hover:bg-purple-100 rounded-lg">
+                        <Copy className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-4">
+            {/* Security Badge */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Secure Payment</p>
+                  <p className="text-xs text-gray-500">256-bit encryption</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600">
+                Your payment information is encrypted and secure. We never store your card details.
+              </p>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              onClick={handlePaymentSubmit}
+              disabled={!paymentMethod || processing}
+              className="w-full py-4 bg-gradient-to-r from-blue-900 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-800 hover:to-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {processing ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-5 h-5" />
+                  Confirm Payment
+                </>
+              )}
+            </button>
+
+            {/* Help */}
+            <div className="bg-gray-50 rounded-xl p-4 text-center">
+              <p className="text-sm text-gray-600 mb-2">Need help with payment?</p>
+              <button onClick={() => navigate('/help')} className="text-blue-600 font-medium text-sm hover:text-blue-800">
+                Contact Support
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
