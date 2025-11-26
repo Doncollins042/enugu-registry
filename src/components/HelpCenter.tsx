@@ -1,369 +1,309 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, LogOut, Bell, HelpCircle, Mail, Phone, MessageCircle, Send, ChevronDown, ChevronUp, ArrowLeft, CheckCircle } from 'lucide-react';
+import { 
+  ArrowLeft, Search, MessageCircle, Phone, Mail, FileText,
+  ChevronDown, ChevronRight, HelpCircle, Book, Shield, CreditCard,
+  Building2, Scale, ExternalLink, Send, X, Headphones
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
-interface HelpCenterProps {
-  user: any;
-  onLogout: () => void;
-}
-
-export default function HelpCenter({ user, onLogout }: HelpCenterProps) {
+export default function HelpCenter() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('faq');
-  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
-  const [sending, setSending] = useState(false);
-  const [messageSent, setMessageSent] = useState(false);
-  const [contactForm, setContactForm] = useState({
-    subject: '',
-    category: 'general',
-    message: '',
-  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [showLiveChat, setShowLiveChat] = useState(false);
+  const [chatMessage, setChatMessage] = useState('');
+  const [chatMessages, setChatMessages] = useState<{type: 'user' | 'agent', text: string}[]>([
+    { type: 'agent', text: 'Hello! Welcome to Enugu Land Registry support. How can I help you today?' }
+  ]);
 
   const faqs = [
     {
-      question: 'How do I purchase a property?',
-      answer: 'To purchase a property: 1) Browse available estates from your dashboard, 2) Select an estate and pay the ₦30,000 search fee, 3) View the survey plan and select your preferred plot, 4) Proceed to payment. All transactions are secured with blockchain technology and you\'ll receive digital ownership documents upon completion.'
+      category: 'Getting Started',
+      icon: Book,
+      questions: [
+        { q: 'How do I create an account?', a: 'Click on "Get Started" from the homepage, then select "Register" to create a new account with your email, phone number, and password.' },
+        { q: 'How do I verify my account?', a: 'After registration, you will receive a 6-digit OTP on your phone. Enter this code to verify your account.' },
+        { q: 'Is my information secure?', a: 'Yes, we use bank-level encryption and blockchain technology to secure all your data and transactions.' },
+      ]
     },
     {
-      question: 'What payment methods are accepted?',
-      answer: 'We accept credit/debit cards (Visa, Mastercard, Verve) and cryptocurrency (Bitcoin, USDT). All payments are processed through our encrypted payment gateway with PCI DSS compliance. You\'ll receive instant confirmation upon successful payment.'
+      category: 'Property Purchase',
+      icon: Building2,
+      questions: [
+        { q: 'How do I buy a property?', a: 'Browse available estates from the dashboard, select a plot, review details, and proceed to payment. All properties are government-verified.' },
+        { q: 'What payment methods are accepted?', a: 'We accept bank transfers, debit/credit cards, USSD payments, and cryptocurrency (BTC, USDT, ETH).' },
+        { q: 'How long does verification take?', a: 'Property verification typically takes 24-48 hours after payment confirmation.' },
+      ]
     },
     {
-      question: 'How long does document verification take?',
-      answer: 'Standard verification takes 5-7 business days and costs ₦15,000. Express verification is completed within 24-48 hours for ₦25,000. You will receive email and SMS notifications once your document is verified, along with a digital certificate.'
+      category: 'Documents & Verification',
+      icon: FileText,
+      questions: [
+        { q: 'How do I verify a land document?', a: 'Go to "Verify Document" from the menu, enter the document number or scan the QR code to verify authenticity.' },
+        { q: "What is Governor's Consent?", a: "Governor's Consent is a mandatory approval required for the transfer of property ownership in Nigeria. It validates legal transfer of land." },
+        { q: 'What is Ground Rent?', a: 'Ground Rent is an annual fee payable to the government for land ownership. You can pay this through our platform.' },
+      ]
     },
     {
-      question: 'What is Governor\'s Consent and why do I need it?',
-      answer: 'Governor\'s Consent is a legal requirement in Nigeria for property transfers, mortgages, or assignments. It\'s the state government\'s approval of your property transaction. Without it, your ownership may not be legally recognized. The processing fee is ₦150,000 and takes 14-21 business days.'
-    },
-    {
-      question: 'How do I pay ground rent?',
-      answer: 'Navigate to "Ground Rent Payment" from your dashboard, select your property from the list, and complete the payment. Ground rent is an annual fee paid to the state government. Failure to pay may result in penalties or forfeiture of land rights.'
-    },
-    {
-      question: 'Can I download my property documents?',
-      answer: 'Yes! All your property documents including Survey Plans, Certificate of Occupancy, Title Deeds, and payment receipts are available in your Portfolio. You can download them in PDF format at any time for your records.'
-    },
-    {
-      question: 'Is my property ownership secured on blockchain?',
-      answer: 'Yes, every property purchase is recorded on the blockchain, creating an immutable record of ownership. This prevents fraud, double-selling, and provides permanent proof of your ownership that cannot be altered or disputed.'
-    },
-    {
-      question: 'What happens if I forget my password?',
-      answer: 'Click on "Forgot Password" on the login page and enter your registered email address. You\'ll receive a password reset link within minutes. For security, the link expires after 24 hours.'
+      category: 'Payments & Fees',
+      icon: CreditCard,
+      questions: [
+        { q: 'Are there any hidden fees?', a: 'No, all fees are transparently displayed before you make any payment. What you see is what you pay.' },
+        { q: 'Can I get a refund?', a: 'Refunds are processed on a case-by-case basis. Contact support within 24 hours of payment for assistance.' },
+        { q: 'How do I download my receipt?', a: 'Go to your Portfolio, click on the transaction, and select "Download Receipt" to get your payment receipt.' },
+      ]
     },
   ];
 
-  const handleSubmitContact = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendMessage = () => {
+    if (!chatMessage.trim()) return;
     
-    if (!contactForm.subject.trim()) {
-      toast.error('Please enter a subject');
-      return;
-    }
-    if (!contactForm.message.trim()) {
-      toast.error('Please enter your message');
-      return;
-    }
-    if (contactForm.message.length < 20) {
-      toast.error('Please provide more details (at least 20 characters)');
-      return;
-    }
-
-    setSending(true);
-    toast.loading('Sending your message...', { id: 'contact' });
-
+    setChatMessages([...chatMessages, { type: 'user', text: chatMessage }]);
+    setChatMessage('');
+    
+    // Simulate agent response
     setTimeout(() => {
-      toast.dismiss('contact');
-      setSending(false);
-      setMessageSent(true);
-      toast.success('Message sent successfully!');
-    }, 2000);
-  };
-
-  const handleNewMessage = () => {
-    setContactForm({ subject: '', category: 'general', message: '' });
-    setMessageSent(false);
-  };
-
-  const handleStartLiveChat = () => {
-    toast.success('Connecting to live support...');
-    setTimeout(() => {
-      toast('💬 A support agent will be with you shortly', { duration: 5000 });
+      setChatMessages(prev => [...prev, { 
+        type: 'agent', 
+        text: 'Thank you for your message. Our support team will respond shortly. For urgent matters, please call +234 801 234 5678.' 
+      }]);
     }, 1500);
   };
 
+  const handleWhatsApp = () => {
+    window.open('https://wa.me/2348012345678?text=Hello, I need help with Enugu Land Registry', '_blank');
+  };
+
+  const filteredFaqs = faqs.map(category => ({
+    ...category,
+    questions: category.questions.filter(
+      q => q.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           q.a.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(category => category.questions.length > 0);
+
   return (
-    <div className="min-h-screen bg-gray-50 relative">
-      {/* Blurred Background */}
-      <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-gray-50/98 to-white/95 z-10"></div>
-        <img src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=1920&q=80" alt="Support" className="w-full h-full object-cover opacity-20 blur-md" />
-      </div>
-
-      {/* Content */}
-      <div className="relative z-20">
-        {/* Header */}
-        <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-900 to-blue-700 rounded-lg flex items-center justify-center">
-                  <Home className="w-6 h-6 text-amber-400" />
-                </div>
-                <div>
-                  <h1 className="text-base font-bold text-gray-900">Enugu State Land Registry</h1>
-                  <p className="text-xs text-gray-600">Help & Support</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                  <Bell className="w-5 h-5 text-gray-700" />
-                </button>
-                <button onClick={onLogout} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                  <LogOut className="w-5 h-5 text-gray-700" />
-                </button>
-              </div>
-            </div>
+    <div className="min-h-screen bg-gray-50 pb-24">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-blue-900 to-blue-800 text-white">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
+          <button onClick={() => navigate('/dashboard')} className="p-2 hover:bg-white/10 rounded-lg">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold">Help Center</h1>
+            <p className="text-sm text-blue-200">We're here to help you</p>
           </div>
-        </header>
+        </div>
+        
+        {/* Search */}
+        <div className="max-w-4xl mx-auto px-4 pb-8 pt-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search for help..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 rounded-xl text-gray-900 focus:ring-4 focus:ring-blue-300"
+            />
+          </div>
+        </div>
+      </header>
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-          <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 text-sm">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* Quick Contact Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <button 
+            onClick={handleWhatsApp}
+            className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl p-4 flex items-center gap-3 transition-all"
+          >
+            <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+              <MessageCircle className="w-6 h-6" />
+            </div>
+            <div className="text-left">
+              <p className="font-semibold">WhatsApp</p>
+              <p className="text-sm text-emerald-100">Chat with us</p>
+            </div>
           </button>
 
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">How can we help you?</h1>
-            <p className="text-sm text-gray-600">Find answers to common questions or contact our support team</p>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-            {[
-              { id: 'faq', label: 'FAQ', icon: HelpCircle },
-              { id: 'contact', label: 'Contact Us', icon: Mail },
-              { id: 'live-chat', label: 'Live Chat', icon: MessageCircle },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all text-sm flex items-center gap-2 whitespace-nowrap ${
-                  activeTab === tab.id 
-                    ? 'bg-blue-900 text-white' 
-                    : 'bg-white/90 border border-gray-200 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* FAQ Tab */}
-          {activeTab === 'faq' && (
-            <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
-              <div className="space-y-3">
-                {faqs.map((faq, i) => (
-                  <div key={i} className="border border-gray-200 rounded-lg overflow-hidden">
-                    <button
-                      onClick={() => setExpandedFaq(expandedFaq === i ? null : i)}
-                      className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-all text-left"
-                    >
-                      <span className="text-sm font-medium text-gray-900 pr-4">{faq.question}</span>
-                      {expandedFaq === i ? (
-                        <ChevronUp className="w-5 h-5 text-gray-600 flex-shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-gray-600 flex-shrink-0" />
-                      )}
-                    </button>
-                    {expandedFaq === i && (
-                      <div className="px-4 pb-4 text-sm text-gray-700 leading-relaxed bg-gray-50 border-t border-gray-200">
-                        <p className="pt-3">{faq.answer}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+          <a 
+            href="tel:+2348012345678"
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl p-4 flex items-center gap-3 transition-all"
+          >
+            <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+              <Phone className="w-6 h-6" />
             </div>
-          )}
-
-          {/* Contact Tab */}
-          {activeTab === 'contact' && (
-            <div className="grid lg:grid-cols-2 gap-6">
-              <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm">
-                {!messageSent ? (
-                  <>
-                    <h2 className="text-lg font-bold text-gray-900 mb-6">Send us a message</h2>
-                    <form onSubmit={handleSubmitContact} className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                        <select
-                          value={contactForm.category}
-                          onChange={(e) => setContactForm({ ...contactForm, category: e.target.value })}
-                          disabled={sending}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                        >
-                          <option value="general">General Inquiry</option>
-                          <option value="technical">Technical Support</option>
-                          <option value="payment">Payment Issues</option>
-                          <option value="documents">Document Verification</option>
-                          <option value="complaint">Complaint</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
-                        <input
-                          type="text"
-                          value={contactForm.subject}
-                          onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
-                          disabled={sending}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                          placeholder="Brief description of your issue"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Message *</label>
-                        <textarea
-                          value={contactForm.message}
-                          onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                          disabled={sending}
-                          rows={6}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50 resize-none"
-                          placeholder="Describe your issue or question in detail..."
-                        ></textarea>
-                        <p className="text-xs text-gray-500 mt-1">{contactForm.message.length}/500 characters</p>
-                      </div>
-                      <button
-                        type="submit"
-                        disabled={sending}
-                        className="w-full py-3 bg-blue-900 text-white rounded-lg font-semibold hover:bg-blue-800 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        {sending ? (
-                          <>
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            Sending...
-                          </>
-                        ) : (
-                          <>
-                            <Send className="w-5 h-5" />
-                            Send Message
-                          </>
-                        )}
-                      </button>
-                    </form>
-                  </>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle className="w-10 h-10 text-emerald-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">Message Sent!</h3>
-                    <p className="text-sm text-gray-600 mb-6">
-                      Thank you for contacting us. Our support team will respond within 24 hours.
-                    </p>
-                    <button
-                      onClick={handleNewMessage}
-                      className="px-6 py-2 bg-blue-900 text-white rounded-lg font-medium hover:bg-blue-800 transition-all text-sm"
-                    >
-                      Send Another Message
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Mail className="w-6 h-6 text-blue-900" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-gray-900 mb-1">Email Support</h3>
-                      <p className="text-sm text-gray-600 mb-2">We'll respond within 24 hours</p>
-                      <a href="mailto:support@enugu-lands.gov.ng" className="text-sm text-blue-900 font-medium hover:text-blue-800">
-                        support@enugu-lands.gov.ng
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Phone className="w-6 h-6 text-emerald-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-gray-900 mb-1">Phone Support</h3>
-                      <p className="text-sm text-gray-600 mb-2">Mon-Fri: 8AM - 5PM WAT</p>
-                      <a href="tel:+2348012345678" className="text-sm text-blue-900 font-medium hover:text-blue-800">
-                        +234 801 234 5678
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <MessageCircle className="w-6 h-6 text-purple-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-gray-900 mb-1">Office Address</h3>
-                      <p className="text-sm text-gray-600">
-                        Ministry of Lands & Urban Development<br />
-                        Independence Layout<br />
-                        Enugu State, Nigeria
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="text-left">
+              <p className="font-semibold">Call Us</p>
+              <p className="text-sm text-blue-100">+234 801 234 5678</p>
             </div>
-          )}
+          </a>
 
-          {/* Live Chat Tab */}
-          {activeTab === 'live-chat' && (
-            <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-12 text-center shadow-sm">
-              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <MessageCircle className="w-12 h-12 text-blue-900" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Live Chat Support</h3>
-              <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
-                Connect with our support team in real-time for immediate assistance with your queries.
-              </p>
-              <button 
-                onClick={handleStartLiveChat}
-                className="px-8 py-3 bg-blue-900 text-white rounded-lg font-semibold hover:bg-blue-800 transition-all text-sm"
-              >
-                Start Live Chat
-              </button>
-              <p className="text-xs text-gray-500 mt-4">Available Mon-Fri: 8AM - 5PM WAT</p>
-              
-              <div className="mt-8 pt-8 border-t border-gray-200">
-                <p className="text-sm text-gray-600 mb-4">Can't wait? Try these alternatives:</p>
-                <div className="flex flex-wrap justify-center gap-3">
-                  <button 
-                    onClick={() => setActiveTab('faq')}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all"
-                  >
-                    Browse FAQs
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('contact')}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all"
-                  >
-                    Send Email
-                  </button>
-                </div>
-              </div>
+          <a 
+            href="mailto:support@enugu.gov.ng"
+            className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl p-4 flex items-center gap-3 transition-all"
+          >
+            <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+              <Mail className="w-6 h-6" />
             </div>
-          )}
+            <div className="text-left">
+              <p className="font-semibold">Email</p>
+              <p className="text-sm text-purple-100">support@enugu.gov.ng</p>
+            </div>
+          </a>
         </div>
+
+        {/* FAQs */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-gray-900">Frequently Asked Questions</h2>
+          
+          {(searchQuery ? filteredFaqs : faqs).map((category, catIndex) => (
+            <div key={catIndex} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="flex items-center gap-3 p-4 bg-gray-50 border-b border-gray-200">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <category.icon className="w-5 h-5 text-blue-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900">{category.category}</h3>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {category.questions.map((faq, faqIndex) => {
+                  const index = catIndex * 10 + faqIndex;
+                  return (
+                    <div key={faqIndex}>
+                      <button
+                        onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                        className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-all"
+                      >
+                        <span className="font-medium text-gray-900 pr-4">{faq.q}</span>
+                        <ChevronDown className={`w-5 h-5 text-gray-400 flex-shrink-0 transition-transform ${
+                          openFaq === index ? 'rotate-180' : ''
+                        }`} />
+                      </button>
+                      {openFaq === index && (
+                        <div className="px-4 pb-4 text-gray-600 text-sm leading-relaxed bg-blue-50/50">
+                          {faq.a}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Still Need Help */}
+        <div className="bg-gradient-to-r from-blue-900 to-blue-800 rounded-2xl p-6 text-white text-center">
+          <Headphones className="w-12 h-12 mx-auto mb-4 text-amber-400" />
+          <h3 className="text-xl font-bold mb-2">Still Need Help?</h3>
+          <p className="text-blue-200 mb-4">Our support team is available 24/7 to assist you</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button 
+              onClick={() => setShowLiveChat(true)}
+              className="px-6 py-3 bg-white text-blue-900 rounded-lg font-semibold hover:bg-gray-100 transition-all"
+            >
+              Start Live Chat
+            </button>
+            <button 
+              onClick={handleWhatsApp}
+              className="px-6 py-3 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-600 transition-all"
+            >
+              Chat on WhatsApp
+            </button>
+          </div>
+        </div>
+      </main>
+
+      {/* Floating Support Buttons */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
+        {/* WhatsApp Button */}
+        <button
+          onClick={handleWhatsApp}
+          className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+        >
+          <svg viewBox="0 0 24 24" className="w-7 h-7 fill-current">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+        </button>
+
+        {/* Live Chat Button */}
+        <button
+          onClick={() => setShowLiveChat(true)}
+          className="w-14 h-14 bg-blue-900 hover:bg-blue-800 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+        >
+          <MessageCircle className="w-7 h-7" />
+        </button>
       </div>
+
+      {/* Live Chat Modal */}
+      {showLiveChat && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-slide-up">
+            {/* Chat Header */}
+            <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <Headphones className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-semibold">Live Support</p>
+                  <p className="text-xs text-blue-200">Online • Typically replies instantly</p>
+                </div>
+              </div>
+              <button onClick={() => setShowLiveChat(false)} className="p-2 hover:bg-white/10 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Chat Messages */}
+            <div className="h-80 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] px-4 py-2 rounded-2xl ${
+                    msg.type === 'user' 
+                      ? 'bg-blue-900 text-white rounded-br-none' 
+                      : 'bg-white text-gray-900 rounded-bl-none shadow-sm'
+                  }`}>
+                    <p className="text-sm">{msg.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Chat Input */}
+            <div className="p-4 bg-white border-t border-gray-200">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Type your message..."
+                  value={chatMessage}
+                  onChange={(e) => setChatMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  className="px-4 py-3 bg-blue-900 text-white rounded-xl hover:bg-blue-800 transition-all"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slide-up {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

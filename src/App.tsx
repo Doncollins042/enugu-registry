@@ -15,6 +15,7 @@ import GovernorsConsent from './components/GovernorsConsent';
 import GroundRent from './components/GroundRent';
 import HelpCenter from './components/HelpCenter';
 import AdvancedSearch from './components/AdvancedSearch';
+import Settings from './components/Settings';
 import './App.css';
 
 function App() {
@@ -70,9 +71,8 @@ function App() {
         <Route path="/ground-rent" element={user ? <GroundRent /> : <Navigate to="/auth" />} />
         <Route path="/help" element={<HelpCenter />} />
         <Route path="/search" element={<AdvancedSearch />} />
+        <Route path="/settings" element={user ? <Settings user={user} /> : <Navigate to="/auth" />} />
       </Routes>
     </Router>
   );
 }
-
-export default App;
