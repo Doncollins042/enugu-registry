@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Home, Shield, CheckCircle, ArrowRight, Menu, X, MapPin,
   FileCheck, CreditCard, Users, Star, ChevronRight, Phone,
-  Mail, Clock, Building2, Sparkles, Lock, Globe, Award
+  Mail, Clock, Building2, Sparkles, Lock, Globe, Award, QrCode
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -27,21 +27,21 @@ export default function LandingPage() {
       color: 'blue'
     },
     { 
-      icon: Lock, 
-      title: 'Blockchain Secured', 
-      desc: 'Tamper-proof records with blockchain technology',
+      icon: QrCode, 
+      title: 'QR Code Security', 
+      desc: 'Scan to verify any property document instantly',
       color: 'emerald'
     },
     { 
       icon: FileCheck, 
       title: 'Instant Verification', 
-      desc: 'Verify any document in seconds with QR codes',
+      desc: 'Verify any land document in seconds',
       color: 'purple'
     },
     { 
       icon: CreditCard, 
       title: 'Secure Payments', 
-      desc: 'Multiple payment options including crypto',
+      desc: 'Bank transfer, cards & cryptocurrency',
       color: 'amber'
     },
   ];
@@ -148,7 +148,7 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-base sm:text-lg text-blue-100 mb-8 max-w-2xl mx-auto leading-relaxed px-4">
-            Secure, transparent, and efficient property verification and transactions powered by blockchain technology.
+            Secure, transparent, and efficient property verification and transactions with government-backed digital records.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 px-4">
@@ -174,8 +174,8 @@ export default function LandingPage() {
               <span className="text-sm">Government Verified</span>
             </div>
             <div className="flex items-center gap-2 text-white/80">
-              <Lock className="w-5 h-5 text-amber-400" />
-              <span className="text-sm">Blockchain Secured</span>
+              <QrCode className="w-5 h-5 text-amber-400" />
+              <span className="text-sm">QR Code Protected</span>
             </div>
             <div className="flex items-center gap-2 text-white/80">
               <Award className="w-5 h-5 text-blue-400" />
@@ -249,14 +249,14 @@ export default function LandingPage() {
                 onClick={() => navigate('/auth')}
                 className="flex items-center gap-4 p-5 bg-gray-50 hover:bg-blue-50 rounded-2xl cursor-pointer transition-all group"
               >
-                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-all">
+                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-all flex-shrink-0">
                   <service.icon className="w-7 h-7 text-blue-900" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-gray-900">{service.title}</h3>
                   <p className="text-sm text-gray-600">{service.desc}</p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-900 group-hover:translate-x-1 transition-all" />
+                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-900 group-hover:translate-x-1 transition-all flex-shrink-0" />
               </div>
             ))}
           </div>
