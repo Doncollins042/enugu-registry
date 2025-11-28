@@ -30,13 +30,9 @@ interface Plot {
   price: number;
   status: 'available' | 'sold' | 'reserved' | 'commercial';
   plot_type: string;
-  // SVG path coordinates for irregular shapes
-  path: string;
-  labelX: number;
-  labelY: number;
 }
 
-const SEARCH_FEE = 30000; // ₦30,000 search fee
+const SEARCH_FEE = 30000;
 
 export default function EstateDetails() {
   const navigate = useNavigate();
@@ -64,10 +60,28 @@ export default function EstateDetails() {
 
   const fetchEstate = async () => {
     try {
-      const data = await api.getEstate(slug || '');
-      if (data && !data.error) {
-        setEstate(data);
-        generatePlots(data);
+      setLoading(true);
+      
+      // First, fetch all estates
+      const allEstates = await api.getEstates();
+      
+      if (Array.isArray(allEstates) && allEstates.length > 0) {
+        // Find estate by slug or id
+        const foundEstate = allEstates.find((e: Estate) => 
+          e.slug === slug || 
+          e.id.toString() === slug ||
+          e.name.toLowerCase().replace(/\s+/g, '-') === slug
+        );
+        
+        if (foundEstate) {
+          setEstate(foundEstate);
+          generatePlots(foundEstate);
+        } else {
+          console.error('Estate not found in list:', slug);
+          toast.error('Estate not found');
+        }
+      } else {
+        console.error('No estates returned from API');
       }
     } catch (error) {
       console.error('Error fetching estate:', error);
@@ -82,9 +96,6 @@ export default function EstateDetails() {
     const plotTypes = ['Residential', 'Commercial', 'Corner Piece', 'Standard'];
     const sizes = [450, 500, 600, 900, 1000, 1200];
     
-    // Generate irregular plot shapes for survey plan
-    const plotPaths = generateSurveyPlanPaths(estateData.total_plots);
-    
     for (let i = 0; i < estateData.total_plots; i++) {
       const plotNum = i + 1;
       const isAvailable = plotNum <= estateData.available_plots;
@@ -92,10 +103,8 @@ export default function EstateDetails() {
       const maxPrice = parseInt(estateData.max_price);
       const randomPrice = basePrice + Math.random() * (maxPrice - basePrice);
       
-      // Determine status
       let status: 'available' | 'sold' | 'reserved' | 'commercial' = 'sold';
       if (isAvailable) {
-        // Randomly assign some as reserved or commercial
         const rand = Math.random();
         if (rand < 0.7) status = 'available';
         else if (rand < 0.85) status = 'reserved';
@@ -109,70 +118,9 @@ export default function EstateDetails() {
         price: Math.round(randomPrice / 100000) * 100000,
         status,
         plot_type: status === 'commercial' ? 'Commercial' : plotTypes[Math.floor(Math.random() * 3)],
-        path: plotPaths[i]?.path || '',
-        labelX: plotPaths[i]?.labelX || 0,
-        labelY: plotPaths[i]?.labelY || 0,
       });
     }
     setPlots(generatedPlots);
-  };
-
-  // Generate realistic survey plan paths
-  const generateSurveyPlanPaths = (totalPlots: number) => {
-    const paths: { path: string; labelX: number; labelY: number }[] = [];
-    
-    // Create a grid-like layout with irregular shapes
-    const cols = Math.ceil(Math.sqrt(totalPlots * 1.5));
-    const rows = Math.ceil(totalPlots / cols);
-    
-    const baseWidth = 800;
-    const baseHeight = 600;
-    const marginX = 60;
-    const marginY = 80;
-    const roadWidth = 25;
-    
-    const availableWidth = baseWidth - (marginX * 2);
-    const availableHeight = baseHeight - (marginY * 2) - roadWidth;
-    
-    const cellWidth = availableWidth / cols;
-    const cellHeight = availableHeight / rows;
-    
-    let plotIndex = 0;
-    
-    for (let row = 0; row < rows && plotIndex < totalPlots; row++) {
-      for (let col = 0; col < cols && plotIndex < totalPlots; col++) {
-        // Add slight randomness to create irregular shapes
-        const randX1 = (Math.random() - 0.5) * 8;
-        const randX2 = (Math.random() - 0.5) * 8;
-        const randY1 = (Math.random() - 0.5) * 8;
-        const randY2 = (Math.random() - 0.5) * 8;
-        
-        const x = marginX + col * cellWidth;
-        const y = marginY + roadWidth + row * cellHeight;
-        
-        // Create irregular polygon path
-        const x1 = x + 3 + randX1;
-        const y1 = y + 3 + randY1;
-        const x2 = x + cellWidth - 3 + randX2;
-        const y2 = y + 3 - randY1;
-        const x3 = x + cellWidth - 3 - randX1;
-        const y3 = y + cellHeight - 3 + randY2;
-        const x4 = x + 3 - randX2;
-        const y4 = y + cellHeight - 3 - randY2;
-        
-        const path = `M ${x1} ${y1} L ${x2} ${y2} L ${x3} ${y3} L ${x4} ${y4} Z`;
-        
-        paths.push({
-          path,
-          labelX: x + cellWidth / 2,
-          labelY: y + cellHeight / 2,
-        });
-        
-        plotIndex++;
-      }
-    }
-    
-    return paths;
   };
 
   const formatCurrency = (amount: number | string) => {
@@ -282,10 +230,10 @@ export default function EstateDetails() {
 
   const getPlotColor = (status: string) => {
     switch (status) {
-      case 'available': return '#22c55e'; // Green
-      case 'sold': return '#ef4444'; // Red
-      case 'reserved': return '#f97316'; // Orange
-      case 'commercial': return '#f59e0b'; // Amber
+      case 'available': return '#22c55e';
+      case 'sold': return '#ef4444';
+      case 'reserved': return '#f97316';
+      case 'commercial': return '#f59e0b';
       default: return '#94a3b8';
     }
   };
@@ -293,10 +241,10 @@ export default function EstateDetails() {
   const getPlotFill = (status: string, isHovered: boolean) => {
     const baseOpacity = isHovered ? 0.9 : 0.7;
     switch (status) {
-      case 'available': return `rgba(34, 197, 94, ${baseOpacity})`; // Green
-      case 'sold': return `rgba(239, 68, 68, ${baseOpacity})`; // Red
-      case 'reserved': return `rgba(249, 115, 22, ${baseOpacity})`; // Orange
-      case 'commercial': return `rgba(245, 158, 11, ${baseOpacity})`; // Amber
+      case 'available': return `rgba(34, 197, 94, ${baseOpacity})`;
+      case 'sold': return `rgba(239, 68, 68, ${baseOpacity})`;
+      case 'reserved': return `rgba(249, 115, 22, ${baseOpacity})`;
+      case 'commercial': return `rgba(245, 158, 11, ${baseOpacity})`;
       default: return `rgba(148, 163, 184, ${baseOpacity})`;
     }
   };
@@ -304,7 +252,10 @@ export default function EstateDetails() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading estate details...</p>
+        </div>
       </div>
     );
   }
@@ -312,9 +263,12 @@ export default function EstateDetails() {
   if (!estate) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+          <Home className="w-10 h-10 text-gray-400" />
+        </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Estate Not Found</h2>
-        <p className="text-gray-600 mb-4">The estate you're looking for doesn't exist.</p>
-        <button onClick={() => navigate('/dashboard')} className="px-6 py-3 bg-blue-900 text-white rounded-xl">
+        <p className="text-gray-600 mb-4 text-center">The estate you're looking for doesn't exist or may have been removed.</p>
+        <button onClick={() => navigate('/dashboard')} className="px-6 py-3 bg-blue-900 text-white rounded-xl font-semibold">
           Go to Dashboard
         </button>
       </div>
@@ -551,90 +505,94 @@ export default function EstateDetails() {
                 <div className="relative bg-amber-50 rounded-xl border-4 border-amber-200 overflow-auto" style={{ maxHeight: '600px' }}>
                   <div style={{ transform: `scale(${mapZoom})`, transformOrigin: 'top left', transition: 'transform 0.3s' }}>
                     <svg 
-                      viewBox="0 0 800 700" 
+                      viewBox="0 0 900 750" 
                       className="w-full"
-                      style={{ minWidth: '800px', minHeight: '700px' }}
+                      style={{ minWidth: '900px', minHeight: '750px' }}
                     >
-                      {/* Background Pattern */}
+                      {/* Background */}
                       <defs>
-                        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#d4a574" strokeWidth="0.3" opacity="0.5"/>
+                        <pattern id="grid" width="25" height="25" patternUnits="userSpaceOnUse">
+                          <path d="M 25 0 L 0 0 0 25" fill="none" stroke="#d4a574" strokeWidth="0.3" opacity="0.4"/>
                         </pattern>
                         <pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                          <line x1="0" y1="0" x2="0" y2="4" stroke="#8B4513" strokeWidth="0.5" opacity="0.3"/>
+                          <line x1="0" y1="0" x2="0" y2="4" stroke="#991b1b" strokeWidth="0.5" opacity="0.4"/>
                         </pattern>
                       </defs>
                       
                       {/* Paper Background */}
-                      <rect x="0" y="0" width="800" height="700" fill="#fef3c7" />
-                      <rect x="0" y="0" width="800" height="700" fill="url(#grid)" />
+                      <rect x="0" y="0" width="900" height="750" fill="#fef7ed" />
+                      <rect x="0" y="0" width="900" height="750" fill="url(#grid)" />
                       
                       {/* Border Frame */}
-                      <rect x="15" y="15" width="770" height="670" fill="none" stroke="#8B4513" strokeWidth="3" />
-                      <rect x="20" y="20" width="760" height="660" fill="none" stroke="#8B4513" strokeWidth="1" />
+                      <rect x="20" y="20" width="860" height="710" fill="none" stroke="#8B4513" strokeWidth="4" />
+                      <rect x="28" y="28" width="844" height="694" fill="none" stroke="#8B4513" strokeWidth="1.5" />
                       
                       {/* Title Block */}
-                      <rect x="25" y="25" width="750" height="50" fill="#1e3a5f" />
-                      <text x="400" y="45" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold" fontFamily="serif">
+                      <rect x="35" y="35" width="830" height="60" fill="#1e3a5f" />
+                      <text x="450" y="58" textAnchor="middle" fill="white" fontSize="16" fontWeight="bold" fontFamily="Georgia, serif">
                         SURVEY PLAN OF {estate.name.toUpperCase()}
                       </text>
-                      <text x="400" y="62" textAnchor="middle" fill="#fbbf24" fontSize="10" fontFamily="serif">
-                        Located at {estate.location}, Enugu State, Nigeria
+                      <text x="450" y="78" textAnchor="middle" fill="#fbbf24" fontSize="11" fontFamily="Georgia, serif">
+                        Located at {estate.location}, Enugu State, Nigeria | File No: EN/SURV/{estate.id}/2024
                       </text>
                       
                       {/* Main Road */}
-                      <rect x="60" y="80" width="680" height="25" fill="#4a5568" rx="2" />
-                      <text x="400" y="97" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">
-                        MAIN ACCESS ROAD (12M WIDE)
+                      <rect x="35" y="100" width="830" height="35" fill="#374151" rx="3" />
+                      <line x1="35" y1="117" x2="865" y2="117" stroke="#fbbf24" strokeWidth="2" strokeDasharray="15,8" />
+                      <text x="450" y="122" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" fontFamily="Arial">
+                        MAIN ACCESS ROAD (12 METRES WIDE)
                       </text>
-                      <line x1="60" y1="80" x2="740" y2="80" stroke="#fbbf24" strokeWidth="2" strokeDasharray="10,5" />
                       
                       {/* Estate Boundary */}
                       <path 
-                        d="M 55 105 L 745 105 L 750 600 L 50 605 Z" 
+                        d="M 35 140 L 865 140 L 870 650 L 30 655 Z" 
                         fill="none" 
                         stroke="#8B4513" 
                         strokeWidth="3"
-                        strokeDasharray="15,5"
+                        strokeDasharray="20,8"
                       />
                       
                       {/* Internal Roads */}
-                      <rect x="390" y="110" width="20" height="490" fill="#6b7280" opacity="0.6" />
-                      <rect x="60" y="310" width="680" height="15" fill="#6b7280" opacity="0.6" />
+                      <rect x="440" y="145" width="20" height="500" fill="#4b5563" opacity="0.7" />
+                      <text x="450" y="400" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold" transform="rotate(-90, 450, 400)">
+                        INTERNAL ROAD (9M)
+                      </text>
                       
-                      {/* Plots */}
-                      {plots.map((plot, index) => {
-                        // Calculate position based on index
+                      <rect x="35" y="380" width="830" height="18" fill="#4b5563" opacity="0.7" />
+                      <text x="450" y="393" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">
+                        INTERNAL ROAD (9M WIDE)
+                      </text>
+                      
+                      {/* Generate Plots */}
+                      {plots.slice(0, 24).map((plot, index) => {
                         const cols = 6;
                         const row = Math.floor(index / cols);
                         const col = index % cols;
                         
-                        // Adjust for internal roads
-                        const roadOffset = col >= 3 ? 25 : 0;
-                        const rowOffset = row >= 3 ? 20 : 0;
+                        const roadOffsetX = col >= 3 ? 30 : 0;
+                        const roadOffsetY = row >= 2 ? 25 : 0;
                         
-                        const plotWidth = 100;
-                        const plotHeight = 90;
-                        const startX = 65 + col * (plotWidth + 8) + roadOffset;
-                        const startY = 115 + row * (plotHeight + 8) + rowOffset;
+                        const plotWidth = 125;
+                        const plotHeight = 105;
+                        const startX = 45 + col * (plotWidth + 8) + roadOffsetX;
+                        const startY = 150 + row * (plotHeight + 8) + roadOffsetY;
                         
-                        // Create irregular shape variations
-                        const rand1 = ((index * 7) % 10) - 5;
-                        const rand2 = ((index * 11) % 10) - 5;
-                        const rand3 = ((index * 13) % 8) - 4;
-                        const rand4 = ((index * 17) % 8) - 4;
+                        // Create irregular shapes
+                        const r1 = ((index * 7 + 3) % 12) - 6;
+                        const r2 = ((index * 11 + 5) % 12) - 6;
+                        const r3 = ((index * 13 + 7) % 10) - 5;
+                        const r4 = ((index * 17 + 2) % 10) - 5;
                         
                         const pathD = `
-                          M ${startX + rand1} ${startY + rand3}
-                          L ${startX + plotWidth + rand2} ${startY - rand3}
-                          L ${startX + plotWidth - rand1} ${startY + plotHeight + rand4}
-                          L ${startX - rand2} ${startY + plotHeight - rand4}
+                          M ${startX + r1} ${startY + r3}
+                          L ${startX + plotWidth + r2} ${startY - r3}
+                          L ${startX + plotWidth - r1 + 3} ${startY + plotHeight + r4}
+                          L ${startX - r2 + 2} ${startY + plotHeight - r4 + 2}
                           Z
                         `;
                         
                         const centerX = startX + plotWidth / 2;
                         const centerY = startY + plotHeight / 2;
-                        
                         const isHovered = hoveredPlot?.id === plot.id;
                         
                         return (
@@ -645,31 +603,25 @@ export default function EstateDetails() {
                             onMouseLeave={() => setHoveredPlot(null)}
                             style={{ cursor: plot.status === 'sold' ? 'not-allowed' : 'pointer' }}
                           >
-                            {/* Plot Shape */}
                             <path
                               d={pathD}
                               fill={getPlotFill(plot.status, isHovered)}
                               stroke={getPlotColor(plot.status)}
-                              strokeWidth={isHovered ? 3 : 1.5}
+                              strokeWidth={isHovered ? 3 : 2}
                               className="transition-all duration-200"
                             />
                             
-                            {/* Plot hatching for sold plots */}
                             {plot.status === 'sold' && (
-                              <path
-                                d={pathD}
-                                fill="url(#hatch)"
-                                stroke="none"
-                              />
+                              <path d={pathD} fill="url(#hatch)" stroke="none" />
                             )}
                             
                             {/* Plot Number */}
                             <text
                               x={centerX}
-                              y={centerY - 8}
+                              y={centerY - 12}
                               textAnchor="middle"
-                              fill={plot.status === 'sold' ? '#991b1b' : '#1e3a5f'}
-                              fontSize="9"
+                              fill={plot.status === 'sold' ? '#7f1d1d' : '#1e3a5f'}
+                              fontSize="11"
                               fontWeight="bold"
                               fontFamily="monospace"
                             >
@@ -679,111 +631,121 @@ export default function EstateDetails() {
                             {/* Plot Size */}
                             <text
                               x={centerX}
-                              y={centerY + 6}
+                              y={centerY + 4}
                               textAnchor="middle"
-                              fill={plot.status === 'sold' ? '#991b1b' : '#374151'}
-                              fontSize="7"
-                              fontFamily="sans-serif"
+                              fill={plot.status === 'sold' ? '#7f1d1d' : '#374151'}
+                              fontSize="9"
                             >
                               {plot.size_sqm}m²
                             </text>
                             
-                            {/* Status indicator */}
+                            {/* Status */}
                             <text
                               x={centerX}
-                              y={centerY + 18}
+                              y={centerY + 20}
                               textAnchor="middle"
                               fill={getPlotColor(plot.status)}
-                              fontSize="6"
+                              fontSize="8"
                               fontWeight="bold"
-                              textTransform="uppercase"
                             >
-                              {plot.status}
+                              {plot.status.toUpperCase()}
                             </text>
                             
-                            {/* Corner markers */}
-                            <circle cx={startX + rand1} cy={startY + rand3} r="2" fill="#8B4513" />
-                            <circle cx={startX + plotWidth + rand2} cy={startY - rand3} r="2" fill="#8B4513" />
-                            <circle cx={startX + plotWidth - rand1} cy={startY + plotHeight + rand4} r="2" fill="#8B4513" />
-                            <circle cx={startX - rand2} cy={startY + plotHeight - rand4} r="2" fill="#8B4513" />
+                            {/* Corner Markers */}
+                            <circle cx={startX + r1} cy={startY + r3} r="3" fill="#8B4513" />
+                            <circle cx={startX + plotWidth + r2} cy={startY - r3} r="3" fill="#8B4513" />
+                            <circle cx={startX + plotWidth - r1 + 3} cy={startY + plotHeight + r4} r="3" fill="#8B4513" />
+                            <circle cx={startX - r2 + 2} cy={startY + plotHeight - r4 + 2} r="3" fill="#8B4513" />
                           </g>
                         );
                       })}
                       
                       {/* Compass Rose */}
-                      <g transform="translate(700, 550)">
-                        <circle cx="0" cy="0" r="35" fill="#fef3c7" stroke="#8B4513" strokeWidth="2" />
-                        <polygon points="0,-30 5,-5 -5,-5" fill="#1e3a5f" />
-                        <polygon points="0,30 5,5 -5,5" fill="#8B4513" />
-                        <polygon points="-30,0 -5,5 -5,-5" fill="#6b7280" />
-                        <polygon points="30,0 5,5 5,-5" fill="#6b7280" />
-                        <text x="0" y="-38" textAnchor="middle" fill="#1e3a5f" fontSize="10" fontWeight="bold">N</text>
-                        <text x="0" y="48" textAnchor="middle" fill="#8B4513" fontSize="8">S</text>
-                        <text x="-42" y="4" textAnchor="middle" fill="#6b7280" fontSize="8">W</text>
-                        <text x="42" y="4" textAnchor="middle" fill="#6b7280" fontSize="8">E</text>
-                        <circle cx="0" cy="0" r="5" fill="#fbbf24" />
+                      <g transform="translate(800, 580)">
+                        <circle cx="0" cy="0" r="40" fill="#fef7ed" stroke="#8B4513" strokeWidth="2" />
+                        <circle cx="0" cy="0" r="35" fill="none" stroke="#8B4513" strokeWidth="1" />
+                        <polygon points="0,-32 6,-8 -6,-8" fill="#1e3a5f" />
+                        <polygon points="0,32 6,8 -6,8" fill="#8B4513" />
+                        <polygon points="-32,0 -8,6 -8,-6" fill="#6b7280" />
+                        <polygon points="32,0 8,6 8,-6" fill="#6b7280" />
+                        <text x="0" y="-42" textAnchor="middle" fill="#1e3a5f" fontSize="12" fontWeight="bold">N</text>
+                        <text x="0" y="52" textAnchor="middle" fill="#8B4513" fontSize="10">S</text>
+                        <text x="-48" y="4" textAnchor="middle" fill="#6b7280" fontSize="10">W</text>
+                        <text x="48" y="4" textAnchor="middle" fill="#6b7280" fontSize="10">E</text>
+                        <circle cx="0" cy="0" r="6" fill="#fbbf24" stroke="#8B4513" strokeWidth="1" />
                       </g>
                       
                       {/* Scale Bar */}
-                      <g transform="translate(60, 630)">
-                        <text x="0" y="0" fill="#1e3a5f" fontSize="9" fontWeight="bold">SCALE: 1:500</text>
-                        <rect x="0" y="8" width="50" height="6" fill="#1e3a5f" />
-                        <rect x="50" y="8" width="50" height="6" fill="white" stroke="#1e3a5f" />
-                        <rect x="100" y="8" width="50" height="6" fill="#1e3a5f" />
-                        <text x="0" y="28" fill="#374151" fontSize="7">0</text>
-                        <text x="50" y="28" fill="#374151" fontSize="7">25m</text>
-                        <text x="100" y="28" fill="#374151" fontSize="7">50m</text>
-                        <text x="150" y="28" fill="#374151" fontSize="7">75m</text>
+                      <g transform="translate(50, 680)">
+                        <text x="0" y="0" fill="#1e3a5f" fontSize="10" fontWeight="bold">SCALE: 1:500</text>
+                        <rect x="0" y="10" width="60" height="8" fill="#1e3a5f" />
+                        <rect x="60" y="10" width="60" height="8" fill="white" stroke="#1e3a5f" />
+                        <rect x="120" y="10" width="60" height="8" fill="#1e3a5f" />
+                        <rect x="180" y="10" width="60" height="8" fill="white" stroke="#1e3a5f" />
+                        <text x="0" y="32" fill="#374151" fontSize="8">0</text>
+                        <text x="60" y="32" fill="#374151" fontSize="8">25m</text>
+                        <text x="120" y="32" fill="#374151" fontSize="8">50m</text>
+                        <text x="180" y="32" fill="#374151" fontSize="8">75m</text>
+                        <text x="240" y="32" fill="#374151" fontSize="8">100m</text>
                       </g>
                       
                       {/* Surveyor Info */}
-                      <g transform="translate(400, 620)">
-                        <text x="0" y="0" textAnchor="middle" fill="#1e3a5f" fontSize="8" fontWeight="bold">
-                          PREPARED BY: ENUGU STATE SURVEY DEPARTMENT
+                      <g transform="translate(450, 680)">
+                        <text x="0" y="0" textAnchor="middle" fill="#1e3a5f" fontSize="9" fontWeight="bold">
+                          PREPARED BY: ENUGU STATE MINISTRY OF LANDS & SURVEY
                         </text>
-                        <text x="0" y="14" textAnchor="middle" fill="#374151" fontSize="7">
-                          Licensed Surveyor: Surv. Emmanuel Okonkwo | Reg. No: EN/SVR/2024/0456
+                        <text x="0" y="14" textAnchor="middle" fill="#374151" fontSize="8">
+                          Licensed Surveyor: Surv. Emmanuel Okonkwo (FNIS) | Reg. No: EN/SVR/2024/0456
                         </text>
-                        <text x="0" y="26" textAnchor="middle" fill="#374151" fontSize="7">
-                          Date: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        <text x="0" y="28" textAnchor="middle" fill="#374151" fontSize="8">
+                          Date Prepared: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </text>
                       </g>
                       
                       {/* Government Seal */}
-                      <g transform="translate(700, 640)">
-                        <circle cx="0" cy="0" r="25" fill="none" stroke="#1e3a5f" strokeWidth="2" />
-                        <circle cx="0" cy="0" r="20" fill="none" stroke="#1e3a5f" strokeWidth="1" />
-                        <text x="0" y="-5" textAnchor="middle" fill="#1e3a5f" fontSize="6" fontWeight="bold">ENUGU STATE</text>
-                        <text x="0" y="5" textAnchor="middle" fill="#1e3a5f" fontSize="5">GOVT SEAL</text>
-                        <text x="0" y="13" textAnchor="middle" fill="#1e3a5f" fontSize="4">VERIFIED</text>
+                      <g transform="translate(800, 690)">
+                        <circle cx="0" cy="0" r="28" fill="none" stroke="#1e3a5f" strokeWidth="2" />
+                        <circle cx="0" cy="0" r="23" fill="none" stroke="#1e3a5f" strokeWidth="1" />
+                        <text x="0" y="-6" textAnchor="middle" fill="#1e3a5f" fontSize="7" fontWeight="bold">ENUGU STATE</text>
+                        <text x="0" y="4" textAnchor="middle" fill="#1e3a5f" fontSize="6">GOVERNMENT</text>
+                        <text x="0" y="12" textAnchor="middle" fill="#22c55e" fontSize="6" fontWeight="bold">✓ VERIFIED</text>
                       </g>
                     </svg>
                   </div>
                 </div>
 
-                {/* Hovered Plot Info */}
+                {/* Plot Info Popup */}
                 {hoveredPlot && (
-                  <div className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-4 sm:w-72 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-gray-900">{hoveredPlot.plot_number}</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  <div className="fixed bottom-24 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-bold text-gray-900 text-lg">{hoveredPlot.plot_number}</span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                         hoveredPlot.status === 'available' ? 'bg-emerald-100 text-emerald-700' :
                         hoveredPlot.status === 'sold' ? 'bg-red-100 text-red-700' :
                         hoveredPlot.status === 'reserved' ? 'bg-orange-100 text-orange-700' :
                         'bg-amber-100 text-amber-700'
                       }`}>
-                        {hoveredPlot.status.charAt(0).toUpperCase() + hoveredPlot.status.slice(1)}
+                        {hoveredPlot.status.toUpperCase()}
                       </span>
                     </div>
-                    <div className="space-y-1 text-sm">
-                      <p className="text-gray-600">Type: <span className="font-medium">{hoveredPlot.plot_type}</span></p>
-                      <p className="text-gray-600">Size: <span className="font-medium">{hoveredPlot.size_sqm} sqm</span></p>
-                      <p className="text-gray-600">Price: <span className="font-bold text-blue-900">{formatCurrency(hoveredPlot.price)}</span></p>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Plot Type</span>
+                        <span className="font-medium">{hoveredPlot.plot_type}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Size</span>
+                        <span className="font-medium">{hoveredPlot.size_sqm} sqm</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Price</span>
+                        <span className="font-bold text-blue-900">{formatCurrency(hoveredPlot.price)}</span>
+                      </div>
                     </div>
                     {hoveredPlot.status === 'available' && (
                       <button
                         onClick={() => handleSelectPlot(hoveredPlot)}
-                        className="w-full mt-3 py-2 bg-blue-900 text-white rounded-lg text-sm font-medium hover:bg-blue-800"
+                        className="w-full mt-4 py-3 bg-blue-900 text-white rounded-xl font-semibold hover:bg-blue-800 transition-all"
                       >
                         Select This Plot
                       </button>
@@ -791,15 +753,17 @@ export default function EstateDetails() {
                   </div>
                 )}
 
-                {/* Plot Selection Info */}
+                {/* Instructions */}
                 <div className="bg-blue-50 rounded-xl p-4">
                   <div className="flex items-start gap-3">
                     <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium text-blue-900">How to Select a Plot</p>
                       <p className="text-sm text-blue-700 mt-1">
-                        Click on any <span className="text-emerald-600 font-medium">green plot</span> to select it for purchase. 
-                        Red plots are sold, orange plots are reserved.
+                        Click on any <span className="text-emerald-600 font-bold">GREEN</span> plot to select it for purchase. 
+                        <span className="text-red-600 font-bold"> RED</span> = Sold, 
+                        <span className="text-orange-600 font-bold"> ORANGE</span> = Reserved, 
+                        <span className="text-amber-600 font-bold"> AMBER</span> = Commercial.
                       </p>
                     </div>
                   </div>
@@ -807,44 +771,31 @@ export default function EstateDetails() {
               </div>
             )}
 
-            {/* Plots Tab - List View */}
+            {/* Plots Tab */}
             {activeTab === 'plots' && (
               <div className="space-y-4">
                 {/* Filters */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
-                    <button
-                      onClick={() => { setFilterStatus('all'); setCurrentPage(1); }}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                        filterStatus === 'all' ? 'bg-blue-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      All ({plots.length})
-                    </button>
-                    <button
-                      onClick={() => { setFilterStatus('available'); setCurrentPage(1); }}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                        filterStatus === 'available' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Available ({plots.filter(p => p.status === 'available').length})
-                    </button>
-                    <button
-                      onClick={() => { setFilterStatus('sold'); setCurrentPage(1); }}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                        filterStatus === 'sold' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Sold ({plots.filter(p => p.status === 'sold').length})
-                    </button>
-                    <button
-                      onClick={() => { setFilterStatus('reserved'); setCurrentPage(1); }}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                        filterStatus === 'reserved' ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      Reserved ({plots.filter(p => p.status === 'reserved').length})
-                    </button>
+                    {['all', 'available', 'sold', 'reserved', 'commercial'].map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => { setFilterStatus(status as any); setCurrentPage(1); }}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                          filterStatus === status 
+                            ? status === 'available' ? 'bg-emerald-600 text-white' :
+                              status === 'sold' ? 'bg-red-600 text-white' :
+                              status === 'reserved' ? 'bg-orange-600 text-white' :
+                              status === 'commercial' ? 'bg-amber-600 text-white' :
+                              'bg-blue-900 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {status.charAt(0).toUpperCase() + status.slice(1)} ({
+                          status === 'all' ? plots.length : plots.filter(p => p.status === status).length
+                        })
+                      </button>
+                    ))}
                   </div>
                   <div className="flex items-center bg-gray-100 rounded-lg p-1">
                     <button
@@ -862,26 +813,23 @@ export default function EstateDetails() {
                   </div>
                 </div>
 
-                {/* Plots Grid/List */}
+                {/* Plots Display */}
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     {paginatedPlots.map((plot) => (
                       <div
                         key={plot.id}
                         onClick={() => handleSelectPlot(plot)}
-                        className={`bg-white border rounded-xl p-4 transition-all ${
-                          plot.status === 'available' 
-                            ? 'border-emerald-200 hover:border-emerald-400 hover:shadow-lg cursor-pointer bg-emerald-50/30' 
-                            : plot.status === 'reserved'
-                            ? 'border-orange-200 hover:border-orange-400 hover:shadow-lg cursor-pointer bg-orange-50/30'
-                            : plot.status === 'commercial'
-                            ? 'border-amber-200 hover:border-amber-400 hover:shadow-lg cursor-pointer bg-amber-50/30'
-                            : 'border-red-100 opacity-60 cursor-not-allowed bg-red-50/30'
+                        className={`bg-white border-2 rounded-xl p-4 transition-all ${
+                          plot.status === 'available' ? 'border-emerald-300 hover:border-emerald-500 hover:shadow-lg cursor-pointer bg-emerald-50/30' :
+                          plot.status === 'reserved' ? 'border-orange-300 hover:border-orange-500 hover:shadow-lg cursor-pointer bg-orange-50/30' :
+                          plot.status === 'commercial' ? 'border-amber-300 hover:border-amber-500 hover:shadow-lg cursor-pointer bg-amber-50/30' :
+                          'border-red-200 opacity-60 cursor-not-allowed bg-red-50/30'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="font-bold text-gray-900 text-sm">{plot.plot_number}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          <span className="font-bold text-gray-900">{plot.plot_number}</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                             plot.status === 'available' ? 'bg-emerald-100 text-emerald-700' :
                             plot.status === 'sold' ? 'bg-red-100 text-red-700' :
                             plot.status === 'reserved' ? 'bg-orange-100 text-orange-700' :
@@ -890,9 +838,9 @@ export default function EstateDetails() {
                             {plot.status}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500 mb-1">{plot.plot_type}</p>
-                        <p className="text-xs text-gray-500 mb-2">{plot.size_sqm} sqm</p>
-                        <p className="font-bold text-blue-900">{formatCurrency(plot.price)}</p>
+                        <p className="text-sm text-gray-500 mb-1">{plot.plot_type}</p>
+                        <p className="text-sm text-gray-500 mb-2">{plot.size_sqm} sqm</p>
+                        <p className="font-bold text-blue-900 text-lg">{formatCurrency(plot.price)}</p>
                       </div>
                     ))}
                   </div>
@@ -902,24 +850,21 @@ export default function EstateDetails() {
                       <div
                         key={plot.id}
                         onClick={() => handleSelectPlot(plot)}
-                        className={`flex items-center justify-between bg-white border rounded-xl p-4 transition-all ${
-                          plot.status === 'available' 
-                            ? 'border-emerald-200 hover:border-emerald-400 hover:shadow-lg cursor-pointer' 
-                            : plot.status === 'reserved'
-                            ? 'border-orange-200 hover:border-orange-400 hover:shadow-lg cursor-pointer'
-                            : plot.status === 'commercial'
-                            ? 'border-amber-200 hover:border-amber-400 hover:shadow-lg cursor-pointer'
-                            : 'border-red-100 opacity-60 cursor-not-allowed'
+                        className={`flex items-center justify-between bg-white border-2 rounded-xl p-4 transition-all ${
+                          plot.status === 'available' ? 'border-emerald-300 hover:border-emerald-500 hover:shadow-lg cursor-pointer' :
+                          plot.status === 'reserved' ? 'border-orange-300 hover:border-orange-500 hover:shadow-lg cursor-pointer' :
+                          plot.status === 'commercial' ? 'border-amber-300 hover:border-amber-500 hover:shadow-lg cursor-pointer' :
+                          'border-red-200 opacity-60 cursor-not-allowed'
                         }`}
                       >
                         <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                          <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
                             plot.status === 'available' ? 'bg-emerald-100' :
                             plot.status === 'reserved' ? 'bg-orange-100' :
                             plot.status === 'commercial' ? 'bg-amber-100' :
                             'bg-red-100'
                           }`}>
-                            <Home className={`w-6 h-6 ${
+                            <Home className={`w-7 h-7 ${
                               plot.status === 'available' ? 'text-emerald-600' :
                               plot.status === 'reserved' ? 'text-orange-600' :
                               plot.status === 'commercial' ? 'text-amber-600' :
@@ -927,13 +872,13 @@ export default function EstateDetails() {
                             }`} />
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900">{plot.plot_number}</p>
+                            <p className="font-bold text-gray-900 text-lg">{plot.plot_number}</p>
                             <p className="text-sm text-gray-500">{plot.plot_type} • {plot.size_sqm} sqm</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-blue-900">{formatCurrency(plot.price)}</p>
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          <p className="font-bold text-blue-900 text-lg">{formatCurrency(plot.price)}</p>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                             plot.status === 'available' ? 'bg-emerald-100 text-emerald-700' :
                             plot.status === 'sold' ? 'bg-red-100 text-red-700' :
                             plot.status === 'reserved' ? 'bg-orange-100 text-orange-700' :
@@ -957,7 +902,7 @@ export default function EstateDetails() {
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-600 px-4">
                       Page {currentPage} of {totalPages}
                     </span>
                     <button
@@ -1039,13 +984,13 @@ export default function EstateDetails() {
               <div className="bg-gray-50 rounded-xl p-4 mb-6">
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-gray-600">Survey Plan Access</span>
-                  <span className="font-bold text-gray-900">{formatCurrency(SEARCH_FEE)}</span>
+                  <span className="font-bold text-gray-900 text-xl">{formatCurrency(SEARCH_FEE)}</span>
                 </div>
-                <div className="text-xs text-gray-500 space-y-1">
-                  <p>✓ View complete survey plan layout</p>
-                  <p>✓ See all plot positions and boundaries</p>
-                  <p>✓ Check real-time availability status</p>
-                  <p>✓ Access plot sizes and dimensions</p>
+                <div className="text-sm text-gray-500 space-y-2">
+                  <p className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> View complete survey plan layout</p>
+                  <p className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> See all plot positions and boundaries</p>
+                  <p className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> Check real-time availability status</p>
+                  <p className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-500" /> Access plot sizes and dimensions</p>
                 </div>
               </div>
 
@@ -1061,7 +1006,7 @@ export default function EstateDetails() {
                   className="flex-1 py-3 bg-blue-900 text-white rounded-xl font-semibold hover:bg-blue-800 flex items-center justify-center gap-2"
                 >
                   <CreditCard className="w-5 h-5" />
-                  Pay {formatCurrency(SEARCH_FEE)}
+                  Pay Now
                 </button>
               </div>
             </div>
@@ -1083,18 +1028,18 @@ export default function EstateDetails() {
             <div className="p-6">
               <div className="bg-gray-50 rounded-xl p-4 mb-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
                     selectedPlot.status === 'commercial' ? 'bg-amber-100' : 'bg-emerald-100'
                   }`}>
-                    <Home className={`w-6 h-6 ${selectedPlot.status === 'commercial' ? 'text-amber-600' : 'text-emerald-600'}`} />
+                    <Home className={`w-7 h-7 ${selectedPlot.status === 'commercial' ? 'text-amber-600' : 'text-emerald-600'}`} />
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900">{selectedPlot.plot_number}</p>
+                    <p className="font-bold text-gray-900 text-lg">{selectedPlot.plot_number}</p>
                     <p className="text-sm text-gray-600">{estate.name}</p>
                   </div>
                 </div>
                 
-                <div className="space-y-2 text-sm">
+                <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Plot Type</span>
                     <span className="font-medium">{selectedPlot.plot_type}</span>
@@ -1107,10 +1052,10 @@ export default function EstateDetails() {
                     <span className="text-gray-500">Location</span>
                     <span className="font-medium">{estate.location}</span>
                   </div>
-                  <hr className="my-2" />
+                  <hr className="my-3" />
                   <div className="flex justify-between text-lg">
                     <span className="font-bold">Total Price</span>
-                    <span className="font-bold text-blue-900">{formatCurrency(selectedPlot.price)}</span>
+                    <span className="font-bold text-blue-900 text-xl">{formatCurrency(selectedPlot.price)}</span>
                   </div>
                 </div>
               </div>

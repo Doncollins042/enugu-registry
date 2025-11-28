@@ -96,6 +96,12 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
     toast.success('Logged out successfully');
   };
 
+  const handleEstateClick = (estate: Estate) => {
+    // Use slug if available, otherwise use id
+    const identifier = estate.slug || estate.id;
+    navigate(`/estate/${identifier}`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
       {/* Mobile Header */}
@@ -318,7 +324,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                   {displayedEstates.map((estate) => (
                     <div
                       key={estate.id}
-                      onClick={() => navigate(`/estate/${estate.slug}`)}
+                      onClick={() => handleEstateClick(estate)}
                       className="group border border-gray-200 rounded-xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer bg-white"
                     >
                       <div className="relative h-36 sm:h-40 overflow-hidden">
