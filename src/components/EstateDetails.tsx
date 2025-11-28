@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
-  ArrowLeft, MapPin, Shield, CheckCircle, Star, Share2, Heart,
-  Grid, List, ChevronRight, ChevronLeft, Phone, MessageCircle,
-  Ruler, Home, Trees, Zap, Droplets, Car, Filter, Search, X,
-  Map, Eye, Lock, CreditCard, Compass, Info, ZoomIn, ZoomOut,
+  ArrowLeft, MapPin, Shield, CheckCircle, Share2, Heart,
+  Grid, List, ChevronRight, ChevronLeft, MessageCircle,
+  Home, Trees, Zap, Droplets, Car, X,
+  Map, Lock, CreditCard, Info, ZoomIn, ZoomOut,
   Building2, FileText, Clock, Users, Award
 } from 'lucide-react';
 import { api } from '../services/api';
@@ -37,6 +37,7 @@ const SEARCH_FEE = 30000;
 
 export default function EstateDetails() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { slug } = useParams();
   const [estate, setEstate] = useState<Estate | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,12 +53,26 @@ export default function EstateDetails() {
   const [hoveredPlot, setHoveredPlot] = useState<Plot | null>(null);
   const [mapZoom, setMapZoom] = useState(1);
   const plotsPerPage = 8;
-
   const [plots, setPlots] = useState<Plot[]>([]);
 
+  // Fetch estate on mount
   useEffect(() => {
     fetchEstate();
   }, [slug]);
+
+  // Check if returning from successful payment
+  useEffect(() => {
+    if (location.state?.paymentSuccess && estate) {
+      const paidEstates = JSON.parse(localStorage.getItem('paidSearchFees') || '[]');
+      if (paidEstates.includes(estate.name)) {
+        setSearchFeePaid(true);
+        setActiveTab('survey-plan');
+        toast.success('Payment successful! You now have full access.');
+      }
+      // Clear the state to prevent repeated toasts
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, estate]);
 
   const fetchEstate = async () => {
     try {
@@ -74,6 +89,12 @@ export default function EstateDetails() {
         if (foundEstate) {
           setEstate(foundEstate);
           generatePlots(foundEstate);
+          
+          // Check if search fee was already paid for this estate
+          const paidEstates = JSON.parse(localStorage.getItem('paidSearchFees') || '[]');
+          if (paidEstates.includes(foundEstate.name)) {
+            setSearchFeePaid(true);
+          }
         } else {
           toast.error('Estate not found');
         }
@@ -169,7 +190,6 @@ export default function EstateDetails() {
     }
   };
 
-  // Handle tab clicks - check if payment is required
   const handleTabClick = (tabId: string) => {
     if ((tabId === 'survey-plan' || tabId === 'plots') && !searchFeePaid) {
       setShowSearchFeeModal(true);
@@ -187,10 +207,6 @@ export default function EstateDetails() {
         description: `Survey Plan Access - ${estate?.name}`,
         reference: 'PSF' + Date.now(),
         returnUrl: `/estate/${slug}`,
-        onSuccess: () => {
-          setSearchFeePaid(true);
-          setActiveTab('survey-plan');
-        }
       }
     });
   };
@@ -252,17 +268,19 @@ export default function EstateDetails() {
     }
   };
 
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading estate details...</p>
+          <div className="w-14 h-14 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading estate details...</p>
         </div>
       </div>
     );
   }
 
+  // Estate not found
   if (!estate) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -270,8 +288,8 @@ export default function EstateDetails() {
           <Home className="w-10 h-10 text-gray-400" />
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Estate Not Found</h2>
-        <p className="text-gray-600 mb-4 text-center">The estate you're looking for doesn't exist.</p>
-        <button onClick={() => navigate('/dashboard')} className="px-6 py-3 bg-blue-900 text-white rounded-xl font-semibold">
+        <p className="text-gray-600 mb-4 text-center">The estate you're looking for doesn't exist or has been removed.</p>
+        <button onClick={() => navigate('/dashboard')} className="px-6 py-3 bg-blue-900 text-white rounded-xl font-semibold hover:bg-blue-800 transition-all">
           Go to Dashboard
         </button>
       </div>
@@ -281,38 +299,38 @@ export default function EstateDetails() {
   return (
     <div className="min-h-screen bg-gray-50 pb-24 lg:pb-0">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-30 border-b border-gray-100">
+      <header className="bg-white/90 backdrop-blur-lg shadow-sm sticky top-0 z-30 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-xl">
+          <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="font-bold text-gray-900 truncate mx-4">{estate.name}</h1>
           <div className="flex items-center gap-2">
-            <button onClick={handleShare} className="p-2 hover:bg-gray-100 rounded-xl">
+            <button onClick={handleShare} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
               <Share2 className="w-5 h-5 text-gray-600" />
             </button>
-            <button onClick={() => setLiked(!liked)} className="p-2 hover:bg-gray-100 rounded-xl">
-              <Heart className={`w-5 h-5 ${liked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
+            <button onClick={() => setLiked(!liked)} className="p-2 hover:bg-gray-100 rounded-xl transition-all">
+              <Heart className={`w-5 h-5 transition-all ${liked ? 'fill-red-500 text-red-500 scale-110' : 'text-gray-600'}`} />
             </button>
           </div>
         </div>
       </header>
 
       {/* Hero Image */}
-      <div className="relative h-56 sm:h-72 lg:h-96">
+      <div className="relative h-60 sm:h-72 lg:h-96">
         <img src={estate.image_url} alt={estate.name} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
         <div className="absolute bottom-0 left-0 right-0 p-4 lg:p-6">
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <span className="px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-full">
+              <span className="px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-full shadow-lg">
                 {estate.available_plots} Plots Available
               </span>
               <span className="px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white text-xs font-bold rounded-full flex items-center gap-1">
                 <Shield className="w-3 h-3" /> Government Verified
               </span>
             </div>
-            <h1 className="text-2xl lg:text-4xl font-bold text-white mb-2">{estate.name}</h1>
+            <h1 className="text-2xl lg:text-4xl font-bold text-white mb-2 drop-shadow-lg">{estate.name}</h1>
             <div className="flex items-center gap-1 text-white/90">
               <MapPin className="w-4 h-4" />
               <span>{estate.location}, Enugu State</span>
@@ -323,7 +341,7 @@ export default function EstateDetails() {
 
       <main className="max-w-6xl mx-auto px-4 py-6">
         {/* Price Card */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5 lg:p-6 mb-6 -mt-10 relative z-10">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-5 lg:p-6 mb-6 -mt-12 relative z-10">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <p className="text-sm text-gray-500 mb-1">Price Range (Per Plot)</p>
@@ -332,13 +350,13 @@ export default function EstateDetails() {
               </p>
               <div className="flex items-center gap-4 mt-2">
                 <span className="text-sm text-gray-500">{estate.total_plots} Total Plots</span>
-                <span className="text-sm text-emerald-600 font-medium">{estate.available_plots} Available</span>
+                <span className="text-sm text-emerald-600 font-semibold">{estate.available_plots} Available</span>
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={handleWhatsApp}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-600 transition-all"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20"
               >
                 <MessageCircle className="w-5 h-5" />
                 Enquire Now
@@ -351,9 +369,9 @@ export default function EstateDetails() {
                     setActiveTab('survey-plan');
                   }
                 }}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-blue-900 text-white rounded-xl font-semibold hover:bg-blue-800 transition-all"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-blue-900 text-white rounded-xl font-semibold hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/20"
               >
-                <Map className="w-5 h-5" />
+                {searchFeePaid ? <Map className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
                 {searchFeePaid ? 'View Survey Plan' : 'Access Plots'}
               </button>
             </div>
@@ -375,7 +393,7 @@ export default function EstateDetails() {
                 className={`flex-1 py-4 text-sm font-medium border-b-2 transition-all whitespace-nowrap px-4 flex items-center justify-center gap-1.5 ${
                   activeTab === tab.id
                     ? 'border-blue-900 text-blue-900 bg-blue-50/50'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 {tab.locked && <Lock className="w-3.5 h-3.5 text-amber-500" />}
@@ -385,21 +403,19 @@ export default function EstateDetails() {
           </div>
 
           <div className="p-4 lg:p-6">
-            {/* Overview Tab - Available to all */}
+            {/* OVERVIEW TAB */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
-                {/* About */}
                 <div>
                   <h3 className="text-lg font-bold text-gray-900 mb-3">About This Estate</h3>
                   <p className="text-gray-600 leading-relaxed">{estate.description}</p>
                 </div>
 
-                {/* Estate Features */}
                 <div>
                   <h3 className="text-lg font-bold text-gray-900 mb-3">Estate Features</h3>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     {estateFeatures.map((feature, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
+                      <div key={i} className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl hover:bg-blue-100 transition-all">
                         <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                           <feature.icon className="w-5 h-5 text-blue-600" />
                         </div>
@@ -412,73 +428,70 @@ export default function EstateDetails() {
                   </div>
                 </div>
 
-                {/* Quick Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white text-center">
+                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white text-center shadow-lg">
                     <Building2 className="w-8 h-8 mx-auto mb-2 opacity-80" />
                     <p className="text-2xl font-bold">{estate.total_plots}</p>
                     <p className="text-sm text-blue-100">Total Plots</p>
                   </div>
-                  <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-4 text-white text-center">
+                  <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-4 text-white text-center shadow-lg">
                     <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-80" />
                     <p className="text-2xl font-bold">{estate.available_plots}</p>
                     <p className="text-sm text-emerald-100">Available</p>
                   </div>
-                  <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-4 text-white text-center">
+                  <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-4 text-white text-center shadow-lg">
                     <Clock className="w-8 h-8 mx-auto mb-2 opacity-80" />
                     <p className="text-2xl font-bold">Instant</p>
                     <p className="text-sm text-amber-100">Allocation</p>
                   </div>
-                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white text-center">
+                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white text-center shadow-lg">
                     <Shield className="w-8 h-8 mx-auto mb-2 opacity-80" />
                     <p className="text-2xl font-bold">100%</p>
                     <p className="text-sm text-purple-100">Verified</p>
                   </div>
                 </div>
 
-                {/* CTA to Unlock Plots */}
-                <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 rounded-2xl p-6 text-white relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl"></div>
-                  <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl"></div>
-                  
-                  <div className="relative flex flex-col lg:flex-row lg:items-center gap-6">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Lock className="w-5 h-5 text-amber-400" />
-                        <span className="text-amber-400 font-medium text-sm">Premium Access Required</span>
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">View Available Plots & Survey Plan</h3>
-                      <p className="text-blue-200 text-sm">
-                        Pay a one-time search fee of <span className="text-amber-400 font-bold">{formatCurrency(SEARCH_FEE)}</span> to access the detailed survey plan, view all available plots, their exact positions, sizes, and prices.
-                      </p>
-                      
-                      <div className="flex flex-wrap gap-3 mt-4 text-sm">
-                        <span className="flex items-center gap-1.5 text-blue-200">
-                          <CheckCircle className="w-4 h-4 text-emerald-400" /> View Survey Plan
-                        </span>
-                        <span className="flex items-center gap-1.5 text-blue-200">
-                          <CheckCircle className="w-4 h-4 text-emerald-400" /> See All Plots
-                        </span>
-                        <span className="flex items-center gap-1.5 text-blue-200">
-                          <CheckCircle className="w-4 h-4 text-emerald-400" /> Check Availability
-                        </span>
-                        <span className="flex items-center gap-1.5 text-blue-200">
-                          <CheckCircle className="w-4 h-4 text-emerald-400" /> Select & Purchase
-                        </span>
-                      </div>
-                    </div>
+                {/* CTA to Unlock - Only show if not paid */}
+                {!searchFeePaid && (
+                  <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 rounded-2xl p-6 text-white relative overflow-hidden shadow-xl">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/10 rounded-full blur-3xl"></div>
                     
-                    <button
-                      onClick={() => setShowSearchFeeModal(true)}
-                      className="px-8 py-4 bg-amber-500 hover:bg-amber-400 text-blue-900 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap shadow-lg"
-                    >
-                      <CreditCard className="w-5 h-5" />
-                      Pay {formatCurrency(SEARCH_FEE)}
-                    </button>
+                    <div className="relative flex flex-col lg:flex-row lg:items-center gap-6">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Lock className="w-5 h-5 text-amber-400" />
+                          <span className="text-amber-400 font-medium text-sm">Premium Access Required</span>
+                        </div>
+                        <h3 className="text-xl font-bold mb-2">View Available Plots & Survey Plan</h3>
+                        <p className="text-blue-200 text-sm">
+                          Pay a one-time search fee of <span className="text-amber-400 font-bold">{formatCurrency(SEARCH_FEE)}</span> to access the detailed survey plan and all plot information.
+                        </p>
+                        
+                        <div className="flex flex-wrap gap-3 mt-4 text-sm">
+                          <span className="flex items-center gap-1.5 text-blue-200">
+                            <CheckCircle className="w-4 h-4 text-emerald-400" /> View Survey Plan
+                          </span>
+                          <span className="flex items-center gap-1.5 text-blue-200">
+                            <CheckCircle className="w-4 h-4 text-emerald-400" /> See All Plots
+                          </span>
+                          <span className="flex items-center gap-1.5 text-blue-200">
+                            <CheckCircle className="w-4 h-4 text-emerald-400" /> Select & Purchase
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => setShowSearchFeeModal(true)}
+                        className="px-8 py-4 bg-amber-500 hover:bg-amber-400 text-blue-900 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap shadow-lg hover:shadow-xl"
+                      >
+                        <CreditCard className="w-5 h-5" />
+                        Pay {formatCurrency(SEARCH_FEE)}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Government Verified Badge */}
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
                   <div className="flex items-start gap-3">
                     <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -487,8 +500,7 @@ export default function EstateDetails() {
                     <div>
                       <h4 className="font-bold text-emerald-800">Government Verified Property</h4>
                       <p className="text-sm text-emerald-700 mt-1">
-                        This estate has been verified by the Enugu State Ministry of Lands. All documents are authentic, 
-                        properly registered, and your purchase is 100% secure with legal backing.
+                        This estate has been verified by the Enugu State Ministry of Lands. All documents are authentic and transactions are 100% secure.
                       </p>
                     </div>
                   </div>
@@ -496,21 +508,21 @@ export default function EstateDetails() {
               </div>
             )}
 
-            {/* Survey Plan Tab - LOCKED until payment */}
+            {/* SURVEY PLAN TAB */}
             {activeTab === 'survey-plan' && (
               <>
                 {!searchFeePaid ? (
-                  <div className="text-center py-12">
-                    <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Lock className="w-10 h-10 text-amber-600" />
+                  <div className="text-center py-16">
+                    <div className="w-24 h-24 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Lock className="w-12 h-12 text-amber-600" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Survey Plan Locked</h3>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3">Survey Plan Locked</h3>
                     <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                      Pay a one-time fee of {formatCurrency(SEARCH_FEE)} to view the detailed survey plan with all plot positions and availability.
+                      Pay a one-time fee of {formatCurrency(SEARCH_FEE)} to view the detailed survey plan with all plot positions and boundaries.
                     </p>
                     <button
                       onClick={() => setShowSearchFeeModal(true)}
-                      className="px-8 py-4 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-800 transition-all inline-flex items-center gap-2"
+                      className="px-8 py-4 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-800 inline-flex items-center gap-2 shadow-lg"
                     >
                       <CreditCard className="w-5 h-5" />
                       Pay {formatCurrency(SEARCH_FEE)} to Unlock
@@ -525,316 +537,145 @@ export default function EstateDetails() {
                         <p className="text-blue-200 text-sm">File No: EN/SURV/{estate.id}/2024 | Sheet 1 of 1</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setMapZoom(z => Math.max(0.5, z - 0.25))}
-                          className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-all"
-                        >
+                        <button onClick={() => setMapZoom(z => Math.max(0.5, z - 0.25))} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-all">
                           <ZoomOut className="w-5 h-5" />
                         </button>
-                        <span className="text-sm px-2">{Math.round(mapZoom * 100)}%</span>
-                        <button
-                          onClick={() => setMapZoom(z => Math.min(2, z + 0.25))}
-                          className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-all"
-                        >
+                        <span className="text-sm px-3 bg-white/10 rounded-lg py-1">{Math.round(mapZoom * 100)}%</span>
+                        <button onClick={() => setMapZoom(z => Math.min(2, z + 0.25))} className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-all">
                           <ZoomIn className="w-5 h-5" />
                         </button>
                       </div>
                     </div>
 
                     {/* Legend */}
-                    <div className="flex flex-wrap items-center gap-4 p-3 bg-gray-50 rounded-xl">
-                      <span className="text-sm font-medium text-gray-700">Legend:</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-emerald-500"></div>
-                        <span className="text-sm text-gray-600">Available</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-red-500"></div>
-                        <span className="text-sm text-gray-600">Sold</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-orange-500"></div>
-                        <span className="text-sm text-gray-600">Reserved</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded bg-amber-500"></div>
-                        <span className="text-sm text-gray-600">Commercial</span>
-                      </div>
+                    <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                      <span className="text-sm font-semibold text-gray-700">Legend:</span>
+                      <div className="flex items-center gap-2"><div className="w-5 h-5 rounded bg-emerald-500"></div><span className="text-sm font-medium">Available</span></div>
+                      <div className="flex items-center gap-2"><div className="w-5 h-5 rounded bg-red-500"></div><span className="text-sm font-medium">Sold</span></div>
+                      <div className="flex items-center gap-2"><div className="w-5 h-5 rounded bg-orange-500"></div><span className="text-sm font-medium">Reserved</span></div>
+                      <div className="flex items-center gap-2"><div className="w-5 h-5 rounded bg-amber-500"></div><span className="text-sm font-medium">Commercial</span></div>
                     </div>
 
                     {/* Survey Plan SVG */}
                     <div className="relative bg-amber-50 rounded-xl border-4 border-amber-300 overflow-auto shadow-inner" style={{ maxHeight: '650px' }}>
-                      <div style={{ transform: `scale(${mapZoom})`, transformOrigin: 'top left', transition: 'transform 0.3s' }}>
-                        <svg 
-                          viewBox="0 0 950 800" 
-                          className="w-full"
-                          style={{ minWidth: '950px', minHeight: '800px' }}
-                        >
-                          {/* Background */}
+                      <div style={{ transform: `scale(${mapZoom})`, transformOrigin: 'top left', transition: 'transform 0.3s ease-out' }}>
+                        <svg viewBox="0 0 900 700" className="w-full" style={{ minWidth: '900px', minHeight: '700px' }}>
                           <defs>
                             <pattern id="grid" width="25" height="25" patternUnits="userSpaceOnUse">
-                              <path d="M 25 0 L 0 0 0 25" fill="none" stroke="#c9a66b" strokeWidth="0.4" opacity="0.5"/>
+                              <path d="M 25 0 L 0 0 0 25" fill="none" stroke="#c9a66b" strokeWidth="0.3" opacity="0.5"/>
                             </pattern>
                             <pattern id="hatch-sold" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                              <line x1="0" y1="0" x2="0" y2="6" stroke="#7f1d1d" strokeWidth="1" opacity="0.5"/>
+                              <line x1="0" y1="0" x2="0" y2="6" stroke="#991b1b" strokeWidth="1" opacity="0.4"/>
                             </pattern>
-                            <linearGradient id="roadGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="#4b5563" />
-                              <stop offset="50%" stopColor="#374151" />
-                              <stop offset="100%" stopColor="#4b5563" />
-                            </linearGradient>
                           </defs>
                           
-                          {/* Paper Background */}
-                          <rect x="0" y="0" width="950" height="800" fill="#fef3e2" />
-                          <rect x="0" y="0" width="950" height="800" fill="url(#grid)" />
+                          {/* Background */}
+                          <rect x="0" y="0" width="900" height="700" fill="#fef3e2" />
+                          <rect x="0" y="0" width="900" height="700" fill="url(#grid)" />
                           
-                          {/* Decorative Border */}
-                          <rect x="15" y="15" width="920" height="770" fill="none" stroke="#8B4513" strokeWidth="4" />
-                          <rect x="22" y="22" width="906" height="756" fill="none" stroke="#8B4513" strokeWidth="1.5" strokeDasharray="none" />
-                          <rect x="28" y="28" width="894" height="744" fill="none" stroke="#c9a66b" strokeWidth="0.5" />
+                          {/* Border */}
+                          <rect x="15" y="15" width="870" height="670" fill="none" stroke="#8B4513" strokeWidth="4" />
+                          <rect x="22" y="22" width="856" height="656" fill="none" stroke="#8B4513" strokeWidth="1.5" />
                           
-                          {/* Title Block */}
-                          <rect x="35" y="35" width="880" height="70" fill="#1e3a5f" rx="4" />
-                          <rect x="35" y="35" width="880" height="70" fill="url(#roadGradient)" opacity="0.3" rx="4" />
-                          <text x="475" y="62" textAnchor="middle" fill="white" fontSize="18" fontWeight="bold" fontFamily="Georgia, serif">
-                            SURVEY PLAN OF {estate.name.toUpperCase()}
-                          </text>
-                          <text x="475" y="85" textAnchor="middle" fill="#fbbf24" fontSize="12" fontFamily="Georgia, serif">
-                            Located at {estate.location}, Enugu State, Nigeria | Registration File: EN/LANDS/SURV/{estate.id}/2024
-                          </text>
+                          {/* Title */}
+                          <rect x="30" y="30" width="840" height="55" fill="#1e3a5f" rx="3" />
+                          <text x="450" y="55" textAnchor="middle" fill="white" fontSize="16" fontWeight="bold">SURVEY PLAN OF {estate.name.toUpperCase()}</text>
+                          <text x="450" y="73" textAnchor="middle" fill="#fbbf24" fontSize="10">{estate.location}, Enugu State | File: EN/SURV/{estate.id}/2024</text>
                           
-                          {/* Main Access Road */}
-                          <rect x="35" y="115" width="880" height="40" fill="url(#roadGradient)" rx="3" />
-                          <rect x="35" y="133" width="880" height="4" fill="#fbbf24" opacity="0.8" />
-                          <line x1="35" y1="135" x2="915" y2="135" stroke="white" strokeWidth="2" strokeDasharray="20,15" />
-                          <text x="475" y="140" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" fontFamily="Arial, sans-serif">
-                            MAIN ACCESS ROAD (12 METRES WIDE)
-                          </text>
+                          {/* Main Road */}
+                          <rect x="30" y="90" width="840" height="35" fill="#374151" rx="2" />
+                          <line x1="30" y1="107" x2="870" y2="107" stroke="#fbbf24" strokeWidth="2" strokeDasharray="15,8" />
+                          <text x="450" y="112" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">MAIN ACCESS ROAD (12M WIDE)</text>
                           
-                          {/* Estate Boundary */}
-                          <path 
-                            d="M 35 160 L 915 160 L 920 700 L 30 705 Z" 
-                            fill="none" 
-                            stroke="#8B4513" 
-                            strokeWidth="3"
-                            strokeDasharray="15,8"
-                          />
+                          {/* Internal Roads */}
+                          <rect x="430" y="130" width="25" height="450" fill="#4b5563" opacity="0.7" />
+                          <rect x="30" y="350" width="840" height="20" fill="#4b5563" opacity="0.7" />
                           
-                          {/* Internal Road - Vertical */}
-                          <rect x="460" y="165" width="30" height="530" fill="url(#roadGradient)" opacity="0.8" />
-                          <line x1="475" y1="165" x2="475" y2="695" stroke="white" strokeWidth="1" strokeDasharray="10,8" />
-                          <text x="475" y="420" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold" transform="rotate(-90, 475, 420)" fontFamily="Arial">
-                            INTERNAL ROAD (9M)
-                          </text>
-                          
-                          {/* Internal Road - Horizontal */}
-                          <rect x="35" y="420" width="880" height="25" fill="url(#roadGradient)" opacity="0.8" />
-                          <line x1="35" y1="432" x2="915" y2="432" stroke="white" strokeWidth="1" strokeDasharray="10,8" />
-                          <text x="250" y="437" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold" fontFamily="Arial">
-                            INTERNAL ROAD (9M WIDE)
-                          </text>
-                          <text x="700" y="437" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold" fontFamily="Arial">
-                            INTERNAL ROAD (9M WIDE)
-                          </text>
-                          
-                          {/* Generate Plots with Irregular Shapes */}
+                          {/* Plots */}
                           {plots.slice(0, 24).map((plot, index) => {
                             const cols = 6;
                             const row = Math.floor(index / cols);
                             const col = index % cols;
+                            const roadX = col >= 3 ? 35 : 0;
+                            const roadY = row >= 2 ? 30 : 0;
+                            const pw = 125, ph = 100;
+                            const sx = 40 + col * (pw + 8) + roadX;
+                            const sy = 135 + row * (ph + 8) + roadY;
                             
-                            // Adjust for internal roads
-                            const roadOffsetX = col >= 3 ? 40 : 0;
-                            const roadOffsetY = row >= 2 ? 35 : 0;
+                            // Create irregular shapes
+                            const r1 = ((index * 7) % 10) - 5;
+                            const r2 = ((index * 11) % 10) - 5;
+                            const r3 = ((index * 13) % 8) - 4;
+                            const r4 = ((index * 17) % 8) - 4;
                             
-                            const plotWidth = 130;
-                            const plotHeight = 115;
-                            const startX = 45 + col * (plotWidth + 10) + roadOffsetX;
-                            const startY = 170 + row * (plotHeight + 10) + roadOffsetY;
-                            
-                            // Create more irregular shapes
-                            const seed = index * 17;
-                            const r1 = ((seed + 3) % 14) - 7;
-                            const r2 = ((seed + 7) % 14) - 7;
-                            const r3 = ((seed + 11) % 12) - 6;
-                            const r4 = ((seed + 13) % 12) - 6;
-                            const r5 = ((seed + 5) % 8) - 4;
-                            
-                            // Irregular pentagon/hexagon shapes
-                            const pathD = `
-                              M ${startX + 5 + r1} ${startY + 5 + r3}
-                              L ${startX + plotWidth/2 + r5} ${startY + r4}
-                              L ${startX + plotWidth - 5 + r2} ${startY + 8 - r3}
-                              L ${startX + plotWidth - 3 - r1} ${startY + plotHeight - 5 + r4}
-                              L ${startX + plotWidth/2 - r5} ${startY + plotHeight + r3}
-                              L ${startX + 3 - r2} ${startY + plotHeight - 8 - r4}
-                              Z
-                            `;
-                            
-                            const centerX = startX + plotWidth / 2;
-                            const centerY = startY + plotHeight / 2;
-                            const isHovered = hoveredPlot?.id === plot.id;
+                            const pathD = `M ${sx + r1} ${sy + r3} L ${sx + pw + r2} ${sy - r3} L ${sx + pw - r1} ${sy + ph + r4} L ${sx - r2} ${sy + ph - r4} Z`;
+                            const cx = sx + pw / 2, cy = sy + ph / 2;
+                            const isHov = hoveredPlot?.id === plot.id;
                             
                             return (
                               <g 
-                                key={plot.id}
-                                onClick={() => handleSelectPlot(plot)}
-                                onMouseEnter={() => setHoveredPlot(plot)}
-                                onMouseLeave={() => setHoveredPlot(null)}
+                                key={plot.id} 
+                                onClick={() => handleSelectPlot(plot)} 
+                                onMouseEnter={() => setHoveredPlot(plot)} 
+                                onMouseLeave={() => setHoveredPlot(null)} 
                                 style={{ cursor: plot.status === 'sold' ? 'not-allowed' : 'pointer' }}
                                 className="transition-all"
                               >
-                                {/* Plot Shadow */}
-                                <path
-                                  d={pathD}
-                                  fill="rgba(0,0,0,0.1)"
-                                  transform="translate(3, 3)"
-                                />
-                                
                                 {/* Plot Shape */}
-                                <path
-                                  d={pathD}
-                                  fill={getPlotFill(plot.status, isHovered)}
-                                  stroke={getPlotColor(plot.status)}
-                                  strokeWidth={isHovered ? 4 : 2}
-                                  className="transition-all duration-200"
-                                />
+                                <path d={pathD} fill={getPlotFill(plot.status, isHov)} stroke={getPlotColor(plot.status)} strokeWidth={isHov ? 3 : 2} />
+                                {plot.status === 'sold' && <path d={pathD} fill="url(#hatch-sold)" />}
                                 
-                                {/* Hatch pattern for sold plots */}
-                                {plot.status === 'sold' && (
-                                  <path d={pathD} fill="url(#hatch-sold)" stroke="none" />
-                                )}
-                                
-                                {/* Plot Number Box */}
-                                <rect
-                                  x={centerX - 30}
-                                  y={centerY - 25}
-                                  width="60"
-                                  height="18"
-                                  fill="white"
-                                  opacity="0.9"
-                                  rx="3"
-                                />
+                                {/* Plot Number Background */}
+                                <rect x={cx - 28} y={cy - 22} width="56" height="16" fill="white" opacity="0.95" rx="2" />
                                 
                                 {/* Plot Number */}
-                                <text
-                                  x={centerX}
-                                  y={centerY - 12}
-                                  textAnchor="middle"
-                                  fill={plot.status === 'sold' ? '#991b1b' : '#1e3a5f'}
-                                  fontSize="11"
-                                  fontWeight="bold"
-                                  fontFamily="monospace"
-                                >
-                                  {plot.plot_number}
-                                </text>
+                                <text x={cx} y={cy - 10} textAnchor="middle" fill="#1e3a5f" fontSize="10" fontWeight="bold">{plot.plot_number}</text>
                                 
-                                {/* Plot Size */}
-                                <text
-                                  x={centerX}
-                                  y={centerY + 6}
-                                  textAnchor="middle"
-                                  fill={plot.status === 'sold' ? '#7f1d1d' : '#374151'}
-                                  fontSize="10"
-                                  fontFamily="Arial"
-                                >
-                                  {plot.size_sqm}m²
-                                </text>
+                                {/* Size */}
+                                <text x={cx} y={cy + 5} textAnchor="middle" fill="#374151" fontSize="9">{plot.size_sqm}m²</text>
                                 
                                 {/* Status Badge */}
-                                <rect
-                                  x={centerX - 28}
-                                  y={centerY + 15}
-                                  width="56"
-                                  height="16"
-                                  fill={getPlotColor(plot.status)}
-                                  rx="8"
-                                />
-                                <text
-                                  x={centerX}
-                                  y={centerY + 26}
-                                  textAnchor="middle"
-                                  fill="white"
-                                  fontSize="8"
-                                  fontWeight="bold"
-                                >
-                                  {plot.status.toUpperCase()}
-                                </text>
+                                <rect x={cx - 24} y={cy + 12} width="48" height="14" fill={getPlotColor(plot.status)} rx="7" />
+                                <text x={cx} y={cy + 22} textAnchor="middle" fill="white" fontSize="7" fontWeight="bold">{plot.status.toUpperCase()}</text>
                                 
-                                {/* Survey Markers */}
-                                <circle cx={startX + 5 + r1} cy={startY + 5 + r3} r="4" fill="#8B4513" stroke="white" strokeWidth="1" />
-                                <circle cx={startX + plotWidth - 5 + r2} cy={startY + 8 - r3} r="4" fill="#8B4513" stroke="white" strokeWidth="1" />
-                                <circle cx={startX + plotWidth - 3 - r1} cy={startY + plotHeight - 5 + r4} r="4" fill="#8B4513" stroke="white" strokeWidth="1" />
-                                <circle cx={startX + 3 - r2} cy={startY + plotHeight - 8 - r4} r="4" fill="#8B4513" stroke="white" strokeWidth="1" />
+                                {/* Corner Markers */}
+                                <circle cx={sx + r1} cy={sy + r3} r="3" fill="#8B4513" />
+                                <circle cx={sx + pw + r2} cy={sy - r3} r="3" fill="#8B4513" />
+                                <circle cx={sx + pw - r1} cy={sy + ph + r4} r="3" fill="#8B4513" />
+                                <circle cx={sx - r2} cy={sy + ph - r4} r="3" fill="#8B4513" />
                               </g>
                             );
                           })}
                           
-                          {/* Compass Rose */}
-                          <g transform="translate(850, 620)">
-                            <circle cx="0" cy="0" r="45" fill="#fef3e2" stroke="#8B4513" strokeWidth="3" />
-                            <circle cx="0" cy="0" r="40" fill="none" stroke="#8B4513" strokeWidth="1.5" />
-                            <circle cx="0" cy="0" r="35" fill="none" stroke="#c9a66b" strokeWidth="0.5" />
-                            
-                            {/* Cardinal Directions */}
-                            <polygon points="0,-35 8,-10 -8,-10" fill="#1e3a5f" />
-                            <polygon points="0,35 8,10 -8,10" fill="#8B4513" />
-                            <polygon points="-35,0 -10,8 -10,-8" fill="#6b7280" />
-                            <polygon points="35,0 10,8 10,-8" fill="#6b7280" />
-                            
-                            {/* Intercardinal */}
-                            <line x1="-25" y1="-25" x2="-12" y2="-12" stroke="#c9a66b" strokeWidth="2" />
-                            <line x1="25" y1="-25" x2="12" y2="-12" stroke="#c9a66b" strokeWidth="2" />
-                            <line x1="-25" y1="25" x2="-12" y2="12" stroke="#c9a66b" strokeWidth="2" />
-                            <line x1="25" y1="25" x2="12" y2="12" stroke="#c9a66b" strokeWidth="2" />
-                            
-                            <text x="0" y="-50" textAnchor="middle" fill="#1e3a5f" fontSize="14" fontWeight="bold">N</text>
-                            <text x="0" y="58" textAnchor="middle" fill="#8B4513" fontSize="12">S</text>
-                            <text x="-52" y="5" textAnchor="middle" fill="#6b7280" fontSize="12">W</text>
-                            <text x="52" y="5" textAnchor="middle" fill="#6b7280" fontSize="12">E</text>
-                            
-                            <circle cx="0" cy="0" r="8" fill="#fbbf24" stroke="#8B4513" strokeWidth="2" />
-                            <circle cx="0" cy="0" r="3" fill="#8B4513" />
+                          {/* Compass */}
+                          <g transform="translate(810, 550)">
+                            <circle cx="0" cy="0" r="40" fill="#fef3e2" stroke="#8B4513" strokeWidth="2" />
+                            <polygon points="0,-32 6,-8 -6,-8" fill="#1e3a5f" />
+                            <polygon points="0,32 6,8 -6,8" fill="#8B4513" />
+                            <text x="0" y="-42" textAnchor="middle" fill="#1e3a5f" fontSize="12" fontWeight="bold">N</text>
+                            <circle cx="0" cy="0" r="6" fill="#fbbf24" />
                           </g>
                           
-                          {/* Scale Bar */}
-                          <g transform="translate(50, 730)">
-                            <text x="0" y="0" fill="#1e3a5f" fontSize="11" fontWeight="bold" fontFamily="Georgia">SCALE: 1:500</text>
-                            <rect x="0" y="10" width="70" height="10" fill="#1e3a5f" />
-                            <rect x="70" y="10" width="70" height="10" fill="white" stroke="#1e3a5f" strokeWidth="1" />
-                            <rect x="140" y="10" width="70" height="10" fill="#1e3a5f" />
-                            <rect x="210" y="10" width="70" height="10" fill="white" stroke="#1e3a5f" strokeWidth="1" />
-                            <text x="0" y="35" fill="#374151" fontSize="9">0</text>
-                            <text x="70" y="35" fill="#374151" fontSize="9">25m</text>
-                            <text x="140" y="35" fill="#374151" fontSize="9">50m</text>
-                            <text x="210" y="35" fill="#374151" fontSize="9">75m</text>
-                            <text x="280" y="35" fill="#374151" fontSize="9">100m</text>
+                          {/* Scale */}
+                          <g transform="translate(50, 630)">
+                            <text x="0" y="0" fill="#1e3a5f" fontSize="10" fontWeight="bold">SCALE: 1:500</text>
+                            <rect x="0" y="8" width="50" height="6" fill="#1e3a5f" />
+                            <rect x="50" y="8" width="50" height="6" fill="white" stroke="#1e3a5f" />
+                            <rect x="100" y="8" width="50" height="6" fill="#1e3a5f" />
+                            <text x="0" y="26" fill="#374151" fontSize="8">0</text>
+                            <text x="50" y="26" fill="#374151" fontSize="8">25m</text>
+                            <text x="100" y="26" fill="#374151" fontSize="8">50m</text>
                           </g>
                           
-                          {/* Surveyor Information */}
-                          <g transform="translate(475, 730)">
-                            <text x="0" y="0" textAnchor="middle" fill="#1e3a5f" fontSize="10" fontWeight="bold" fontFamily="Georgia">
-                              PREPARED BY: ENUGU STATE MINISTRY OF LANDS & SURVEY
-                            </text>
-                            <text x="0" y="16" textAnchor="middle" fill="#374151" fontSize="9" fontFamily="Arial">
-                              Licensed Surveyor: Surv. Emmanuel N. Okonkwo (FNIS, MNIS) | Registration No: EN/SVR/2024/0456
-                            </text>
-                            <text x="0" y="30" textAnchor="middle" fill="#374151" fontSize="9" fontFamily="Arial">
-                              Date of Survey: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} | Coordinate System: UTM Zone 32N
-                            </text>
-                          </g>
+                          {/* Footer */}
+                          <text x="450" y="650" textAnchor="middle" fill="#1e3a5f" fontSize="9" fontWeight="bold">ENUGU STATE MINISTRY OF LANDS & SURVEY</text>
+                          <text x="450" y="665" textAnchor="middle" fill="#374151" fontSize="8">Surveyor: Surv. Emmanuel Okonkwo (FNIS) | Date: {new Date().toLocaleDateString('en-GB')}</text>
                           
-                          {/* Government Seal */}
-                          <g transform="translate(850, 740)">
-                            <circle cx="0" cy="0" r="32" fill="#fef3e2" stroke="#1e3a5f" strokeWidth="3" />
-                            <circle cx="0" cy="0" r="27" fill="none" stroke="#1e3a5f" strokeWidth="1.5" />
-                            <circle cx="0" cy="0" r="22" fill="none" stroke="#1e3a5f" strokeWidth="0.5" />
-                            <text x="0" y="-8" textAnchor="middle" fill="#1e3a5f" fontSize="7" fontWeight="bold">ENUGU STATE</text>
-                            <text x="0" y="2" textAnchor="middle" fill="#1e3a5f" fontSize="6">GOVERNMENT</text>
-                            <text x="0" y="11" textAnchor="middle" fill="#1e3a5f" fontSize="5">MINISTRY OF LANDS</text>
-                            <circle cx="0" cy="20" r="8" fill="#22c55e" />
-                            <text x="0" y="23" textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">✓</text>
+                          {/* Seal */}
+                          <g transform="translate(810, 640)">
+                            <circle cx="0" cy="0" r="25" fill="none" stroke="#1e3a5f" strokeWidth="2" />
+                            <text x="0" y="-5" textAnchor="middle" fill="#1e3a5f" fontSize="6" fontWeight="bold">ENUGU STATE</text>
+                            <text x="0" y="5" textAnchor="middle" fill="#22c55e" fontSize="6" fontWeight="bold">VERIFIED ✓</text>
                           </g>
                         </svg>
                       </div>
@@ -844,54 +685,38 @@ export default function EstateDetails() {
                     {hoveredPlot && (
                       <div className="fixed bottom-24 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 bg-white rounded-xl shadow-2xl border-2 border-gray-200 p-4 z-50">
                         <div className="flex items-center justify-between mb-3">
-                          <span className="font-bold text-gray-900 text-lg">{hoveredPlot.plot_number}</span>
-                          <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                            hoveredPlot.status === 'available' ? 'bg-emerald-100 text-emerald-700' :
-                            hoveredPlot.status === 'sold' ? 'bg-red-100 text-red-700' :
-                            hoveredPlot.status === 'reserved' ? 'bg-orange-100 text-orange-700' :
+                          <span className="font-bold text-lg">{hoveredPlot.plot_number}</span>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                            hoveredPlot.status === 'available' ? 'bg-emerald-100 text-emerald-700' : 
+                            hoveredPlot.status === 'sold' ? 'bg-red-100 text-red-700' : 
+                            hoveredPlot.status === 'reserved' ? 'bg-orange-100 text-orange-700' : 
                             'bg-amber-100 text-amber-700'
                           }`}>
                             {hoveredPlot.status.toUpperCase()}
                           </span>
                         </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Plot Type</span>
-                            <span className="font-medium">{hoveredPlot.plot_type}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Size</span>
-                            <span className="font-medium">{hoveredPlot.size_sqm} sqm</span>
-                          </div>
-                          <div className="flex justify-between border-t pt-2">
-                            <span className="text-gray-900 font-medium">Price</span>
-                            <span className="font-bold text-blue-900 text-lg">{formatCurrency(hoveredPlot.price)}</span>
-                          </div>
+                        <div className="space-y-1 text-sm">
+                          <p className="text-gray-500">{hoveredPlot.plot_type} • {hoveredPlot.size_sqm} sqm</p>
+                          <p className="font-bold text-blue-900 text-xl mt-2">{formatCurrency(hoveredPlot.price)}</p>
                         </div>
                         {(hoveredPlot.status === 'available' || hoveredPlot.status === 'commercial') && (
-                          <button
-                            onClick={() => handleSelectPlot(hoveredPlot)}
-                            className="w-full mt-4 py-3 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-800 transition-all"
-                          >
+                          <button onClick={() => handleSelectPlot(hoveredPlot)} className="w-full mt-3 py-3 bg-blue-900 text-white rounded-xl text-sm font-bold hover:bg-blue-800 transition-all">
                             Select This Plot
                           </button>
                         )}
                       </div>
                     )}
 
-                    {/* Instructions */}
-                    <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                    {/* Info */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                       <div className="flex items-start gap-3">
                         <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-medium text-blue-900">How to Select a Plot</p>
-                          <p className="text-sm text-blue-700 mt-1">
-                            Click on any <span className="px-2 py-0.5 bg-emerald-500 text-white rounded text-xs font-bold">GREEN</span> plot to select and purchase. 
-                            <span className="px-2 py-0.5 bg-red-500 text-white rounded text-xs font-bold ml-1">RED</span> = Sold, 
-                            <span className="px-2 py-0.5 bg-orange-500 text-white rounded text-xs font-bold ml-1">ORANGE</span> = Reserved, 
-                            <span className="px-2 py-0.5 bg-amber-500 text-white rounded text-xs font-bold ml-1">AMBER</span> = Commercial.
-                          </p>
-                        </div>
+                        <p className="text-sm text-blue-700">
+                          Click on any <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500 text-white rounded text-xs font-bold">GREEN</span> plot to select and purchase. 
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500 text-white rounded text-xs font-bold ml-1">RED</span> = Sold
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-500 text-white rounded text-xs font-bold ml-1">ORANGE</span> = Reserved
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500 text-white rounded text-xs font-bold ml-1">AMBER</span> = Commercial
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -899,62 +724,50 @@ export default function EstateDetails() {
               </>
             )}
 
-            {/* Plots Tab - LOCKED until payment */}
+            {/* PLOTS TAB */}
             {activeTab === 'plots' && (
               <>
                 {!searchFeePaid ? (
-                  <div className="text-center py-12">
-                    <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Lock className="w-10 h-10 text-amber-600" />
+                  <div className="text-center py-16">
+                    <div className="w-24 h-24 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Lock className="w-12 h-12 text-amber-600" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Plot Details Locked</h3>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3">Plot Details Locked</h3>
                     <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                      Pay a one-time fee of {formatCurrency(SEARCH_FEE)} to view all available plots with their sizes, prices, and exact positions.
+                      Pay a one-time fee of {formatCurrency(SEARCH_FEE)} to view all available plots with their sizes and prices.
                     </p>
-                    <button
-                      onClick={() => setShowSearchFeeModal(true)}
-                      className="px-8 py-4 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-800 transition-all inline-flex items-center gap-2"
-                    >
-                      <CreditCard className="w-5 h-5" />
-                      Pay {formatCurrency(SEARCH_FEE)} to Unlock
+                    <button onClick={() => setShowSearchFeeModal(true)} className="px-8 py-4 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-800 inline-flex items-center gap-2 shadow-lg">
+                      <CreditCard className="w-5 h-5" />Pay {formatCurrency(SEARCH_FEE)} to Unlock
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {/* Filters */}
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
-                        {['all', 'available', 'sold', 'reserved', 'commercial'].map((status) => (
-                          <button
-                            key={status}
-                            onClick={() => { setFilterStatus(status as any); setCurrentPage(1); }}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                              filterStatus === status 
-                                ? status === 'available' ? 'bg-emerald-600 text-white' :
-                                  status === 'sold' ? 'bg-red-600 text-white' :
-                                  status === 'reserved' ? 'bg-orange-600 text-white' :
-                                  status === 'commercial' ? 'bg-amber-600 text-white' :
-                                  'bg-blue-900 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      <div className="flex flex-wrap gap-2">
+                        {['all', 'available', 'sold', 'reserved', 'commercial'].map((s) => (
+                          <button 
+                            key={s} 
+                            onClick={() => { setFilterStatus(s as any); setCurrentPage(1); }} 
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                              filterStatus === s 
+                                ? (s === 'available' ? 'bg-emerald-600 text-white shadow-md' : 
+                                   s === 'sold' ? 'bg-red-600 text-white shadow-md' : 
+                                   s === 'reserved' ? 'bg-orange-600 text-white shadow-md' : 
+                                   s === 'commercial' ? 'bg-amber-600 text-white shadow-md' : 
+                                   'bg-blue-900 text-white shadow-md') 
+                                : 'bg-gray-100 hover:bg-gray-200'
                             }`}
                           >
-                            {status.charAt(0).toUpperCase() + status.slice(1)} ({
-                              status === 'all' ? plots.length : plots.filter(p => p.status === status).length
-                            })
+                            {s.charAt(0).toUpperCase() + s.slice(1)} ({s === 'all' ? plots.length : plots.filter(p => p.status === s).length})
                           </button>
                         ))}
                       </div>
                       <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                        <button
-                          onClick={() => setViewMode('grid')}
-                          className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
-                        >
+                        <button onClick={() => setViewMode('grid')} className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}>
                           <Grid className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => setViewMode('list')}
-                          className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`}
-                        >
+                        <button onClick={() => setViewMode('list')} className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}>
                           <List className="w-4 h-4" />
                         </button>
                       </div>
@@ -964,28 +777,28 @@ export default function EstateDetails() {
                     {viewMode === 'grid' ? (
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                         {paginatedPlots.map((plot) => (
-                          <div
-                            key={plot.id}
-                            onClick={() => handleSelectPlot(plot)}
-                            className={`bg-white border-2 rounded-xl p-4 transition-all ${
-                              plot.status === 'available' ? 'border-emerald-300 hover:border-emerald-500 hover:shadow-lg cursor-pointer' :
-                              plot.status === 'reserved' ? 'border-orange-300 hover:border-orange-500 hover:shadow-lg cursor-pointer' :
-                              plot.status === 'commercial' ? 'border-amber-300 hover:border-amber-500 hover:shadow-lg cursor-pointer' :
+                          <div 
+                            key={plot.id} 
+                            onClick={() => handleSelectPlot(plot)} 
+                            className={`bg-white border-2 rounded-xl p-4 transition-all hover:shadow-lg ${
+                              plot.status === 'available' ? 'border-emerald-300 hover:border-emerald-500 cursor-pointer' : 
+                              plot.status === 'reserved' ? 'border-orange-300 hover:border-orange-500 cursor-pointer' : 
+                              plot.status === 'commercial' ? 'border-amber-300 hover:border-amber-500 cursor-pointer' : 
                               'border-red-200 opacity-60 cursor-not-allowed'
                             }`}
                           >
-                            <div className="flex items-center justify-between mb-2">
+                            <div className="flex justify-between items-start mb-2">
                               <span className="font-bold text-gray-900">{plot.plot_number}</span>
                               <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                plot.status === 'available' ? 'bg-emerald-100 text-emerald-700' :
-                                plot.status === 'sold' ? 'bg-red-100 text-red-700' :
-                                plot.status === 'reserved' ? 'bg-orange-100 text-orange-700' :
+                                plot.status === 'available' ? 'bg-emerald-100 text-emerald-700' : 
+                                plot.status === 'sold' ? 'bg-red-100 text-red-700' : 
+                                plot.status === 'reserved' ? 'bg-orange-100 text-orange-700' : 
                                 'bg-amber-100 text-amber-700'
                               }`}>
                                 {plot.status}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-500 mb-1">{plot.plot_type}</p>
+                            <p className="text-sm text-gray-500">{plot.plot_type}</p>
                             <p className="text-sm text-gray-500 mb-2">{plot.size_sqm} sqm</p>
                             <p className="font-bold text-blue-900 text-lg">{formatCurrency(plot.price)}</p>
                           </div>
@@ -994,27 +807,27 @@ export default function EstateDetails() {
                     ) : (
                       <div className="space-y-2">
                         {paginatedPlots.map((plot) => (
-                          <div
-                            key={plot.id}
-                            onClick={() => handleSelectPlot(plot)}
-                            className={`flex items-center justify-between bg-white border-2 rounded-xl p-4 transition-all ${
-                              plot.status === 'available' ? 'border-emerald-300 hover:border-emerald-500 hover:shadow-lg cursor-pointer' :
-                              plot.status === 'reserved' ? 'border-orange-300 hover:border-orange-500 hover:shadow-lg cursor-pointer' :
-                              plot.status === 'commercial' ? 'border-amber-300 hover:border-amber-500 hover:shadow-lg cursor-pointer' :
+                          <div 
+                            key={plot.id} 
+                            onClick={() => handleSelectPlot(plot)} 
+                            className={`flex items-center justify-between bg-white border-2 rounded-xl p-4 transition-all hover:shadow-lg ${
+                              plot.status === 'available' ? 'border-emerald-300 hover:border-emerald-500 cursor-pointer' : 
+                              plot.status === 'reserved' ? 'border-orange-300 hover:border-orange-500 cursor-pointer' : 
+                              plot.status === 'commercial' ? 'border-amber-300 hover:border-amber-500 cursor-pointer' : 
                               'border-red-200 opacity-60 cursor-not-allowed'
                             }`}
                           >
                             <div className="flex items-center gap-4">
                               <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
-                                plot.status === 'available' ? 'bg-emerald-100' :
-                                plot.status === 'reserved' ? 'bg-orange-100' :
-                                plot.status === 'commercial' ? 'bg-amber-100' :
+                                plot.status === 'available' ? 'bg-emerald-100' : 
+                                plot.status === 'reserved' ? 'bg-orange-100' : 
+                                plot.status === 'commercial' ? 'bg-amber-100' : 
                                 'bg-red-100'
                               }`}>
                                 <Home className={`w-7 h-7 ${
-                                  plot.status === 'available' ? 'text-emerald-600' :
-                                  plot.status === 'reserved' ? 'text-orange-600' :
-                                  plot.status === 'commercial' ? 'text-amber-600' :
+                                  plot.status === 'available' ? 'text-emerald-600' : 
+                                  plot.status === 'reserved' ? 'text-orange-600' : 
+                                  plot.status === 'commercial' ? 'text-amber-600' : 
                                   'text-red-400'
                                 }`} />
                               </div>
@@ -1025,10 +838,10 @@ export default function EstateDetails() {
                             </div>
                             <div className="text-right">
                               <p className="font-bold text-blue-900 text-lg">{formatCurrency(plot.price)}</p>
-                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                plot.status === 'available' ? 'bg-emerald-100 text-emerald-700' :
-                                plot.status === 'sold' ? 'bg-red-100 text-red-700' :
-                                plot.status === 'reserved' ? 'bg-orange-100 text-orange-700' :
+                              <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mt-1 ${
+                                plot.status === 'available' ? 'bg-emerald-100 text-emerald-700' : 
+                                plot.status === 'sold' ? 'bg-red-100 text-red-700' : 
+                                plot.status === 'reserved' ? 'bg-orange-100 text-orange-700' : 
                                 'bg-amber-100 text-amber-700'
                               }`}>
                                 {plot.status}
@@ -1041,22 +854,12 @@ export default function EstateDetails() {
 
                     {/* Pagination */}
                     {totalPages > 1 && (
-                      <div className="flex items-center justify-center gap-2 pt-4 border-t border-gray-100">
-                        <button
-                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                          disabled={currentPage === 1}
-                          className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                        >
+                      <div className="flex items-center justify-center gap-3 pt-4 border-t">
+                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition-all">
                           <ChevronLeft className="w-5 h-5" />
                         </button>
-                        <span className="text-sm text-gray-600 px-4">
-                          Page {currentPage} of {totalPages}
-                        </span>
-                        <button
-                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                          disabled={currentPage === totalPages}
-                          className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                        >
+                        <span className="text-sm font-medium">Page {currentPage} of {totalPages}</span>
+                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition-all">
                           <ChevronRight className="w-5 h-5" />
                         </button>
                       </div>
@@ -1066,17 +869,17 @@ export default function EstateDetails() {
               </>
             )}
 
-            {/* Amenities Tab - Available to all */}
+            {/* AMENITIES TAB */}
             {activeTab === 'amenities' && (
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                {amenities.map((amenity, i) => (
-                  <div key={i} className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all">
+                {amenities.map((a, i) => (
+                  <div key={i} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all">
                     <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <amenity.icon className="w-6 h-6 text-blue-600" />
+                      <a.icon className="w-6 h-6 text-blue-600" />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{amenity.label}</p>
-                      <p className="text-sm text-gray-500">{amenity.desc}</p>
+                      <p className="font-semibold text-gray-900">{a.label}</p>
+                      <p className="text-sm text-gray-500">{a.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -1087,24 +890,15 @@ export default function EstateDetails() {
       </main>
 
       {/* Mobile Bottom CTA */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-30">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-30 shadow-lg">
         <div className="flex gap-3">
-          <button
-            onClick={handleWhatsApp}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-500 text-white rounded-xl font-bold"
-          >
+          <button onClick={handleWhatsApp} className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-emerald-500 text-white rounded-xl font-bold shadow-md">
             <MessageCircle className="w-5 h-5" />
             Enquire
           </button>
-          <button
-            onClick={() => {
-              if (!searchFeePaid) {
-                setShowSearchFeeModal(true);
-              } else {
-                setActiveTab('survey-plan');
-              }
-            }}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-blue-900 text-white rounded-xl font-bold"
+          <button 
+            onClick={() => !searchFeePaid ? setShowSearchFeeModal(true) : setActiveTab('survey-plan')} 
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-blue-900 text-white rounded-xl font-bold shadow-md"
           >
             {searchFeePaid ? <Map className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
             {searchFeePaid ? 'Survey Plan' : 'Access Plots'}
@@ -1112,70 +906,46 @@ export default function EstateDetails() {
         </div>
       </div>
 
-      {/* Search Fee Modal */}
+      {/* SEARCH FEE MODAL */}
       {showSearchFeeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white p-5">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-lg">Plot Search Fee</h3>
-                <button onClick={() => setShowSearchFeeModal(false)} className="p-1 hover:bg-white/10 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+            <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white p-5 flex justify-between items-center">
+              <h3 className="font-bold text-lg">Plot Search Fee</h3>
+              <button onClick={() => setShowSearchFeeModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition-all">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            
             <div className="p-6">
               <div className="text-center mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-amber-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-amber-200 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                   <Map className="w-10 h-10 text-amber-600" />
                 </div>
                 <h4 className="text-xl font-bold text-gray-900 mb-2">Unlock Full Access</h4>
                 <p className="text-gray-600 text-sm">
-                  Get complete access to the survey plan and all plot details for <span className="font-bold">{estate.name}</span>
+                  Get complete access to survey plan and plots for <span className="font-bold">{estate.name}</span>
                 </p>
               </div>
-
-              <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
+              
+              <div className="bg-gray-50 rounded-xl p-5 mb-6">
+                <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
                   <span className="text-gray-600">One-time Search Fee</span>
                   <span className="font-bold text-blue-900 text-2xl">{formatCurrency(SEARCH_FEE)}</span>
                 </div>
                 <div className="space-y-3 text-sm">
-                  <p className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                    <span className="text-gray-700">View detailed survey plan layout</span>
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                    <span className="text-gray-700">See all plot positions & boundaries</span>
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                    <span className="text-gray-700">Check real-time availability status</span>
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                    <span className="text-gray-700">View plot sizes, types & prices</span>
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                    <span className="text-gray-700">Select & proceed to purchase</span>
-                  </p>
+                  <p className="flex items-center gap-3"><CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" /><span>View detailed survey plan layout</span></p>
+                  <p className="flex items-center gap-3"><CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" /><span>See all plot positions & boundaries</span></p>
+                  <p className="flex items-center gap-3"><CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" /><span>Check real-time availability status</span></p>
+                  <p className="flex items-center gap-3"><CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" /><span>View plot sizes, types & prices</span></p>
+                  <p className="flex items-center gap-3"><CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" /><span>Select & proceed to purchase</span></p>
                 </div>
               </div>
-
+              
               <div className="flex gap-3">
-                <button
-                  onClick={() => setShowSearchFeeModal(false)}
-                  className="flex-1 py-3.5 border-2 border-gray-300 rounded-xl font-semibold hover:bg-gray-50 transition-all"
-                >
+                <button onClick={() => setShowSearchFeeModal(false)} className="flex-1 py-3.5 border-2 border-gray-300 rounded-xl font-semibold hover:bg-gray-50 transition-all">
                   Cancel
                 </button>
-                <button
-                  onClick={handlePaySearchFee}
-                  className="flex-1 py-3.5 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-800 flex items-center justify-center gap-2 transition-all"
-                >
+                <button onClick={handlePaySearchFee} className="flex-1 py-3.5 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-800 flex items-center justify-center gap-2 transition-all shadow-lg">
                   <CreditCard className="w-5 h-5" />
                   Pay Now
                 </button>
@@ -1185,28 +955,25 @@ export default function EstateDetails() {
         </div>
       )}
 
-      {/* Purchase Modal */}
+      {/* PURCHASE MODAL */}
       {showPurchaseModal && selectedPlot && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
           <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl shadow-2xl overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white p-5 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white p-5 flex justify-between items-center sm:rounded-t-2xl">
               <h3 className="font-bold text-lg">Confirm Purchase</h3>
-              <button onClick={() => setShowPurchaseModal(false)} className="p-1 hover:bg-white/10 rounded-lg">
+              <button onClick={() => setShowPurchaseModal(false)} className="p-2 hover:bg-white/10 rounded-lg transition-all">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
             <div className="p-6">
-              <div className="bg-gray-50 rounded-xl p-4 mb-6">
+              <div className="bg-gray-50 rounded-xl p-5 mb-6">
                 <div className="flex items-center gap-4 mb-4 pb-4 border-b border-gray-200">
-                  <div className={`w-16 h-16 rounded-xl flex items-center justify-center ${
-                    selectedPlot.status === 'commercial' ? 'bg-amber-100' : 'bg-emerald-100'
-                  }`}>
+                  <div className={`w-16 h-16 rounded-xl flex items-center justify-center ${selectedPlot.status === 'commercial' ? 'bg-amber-100' : 'bg-emerald-100'}`}>
                     <Home className={`w-8 h-8 ${selectedPlot.status === 'commercial' ? 'text-amber-600' : 'text-emerald-600'}`} />
                   </div>
                   <div>
                     <p className="font-bold text-gray-900 text-xl">{selectedPlot.plot_number}</p>
-                    <p className="text-sm text-gray-600">{estate.name}</p>
+                    <p className="text-gray-600">{estate.name}</p>
                   </div>
                 </div>
                 
@@ -1224,24 +991,18 @@ export default function EstateDetails() {
                     <span className="font-medium">{estate.location}</span>
                   </div>
                   <hr className="my-3" />
-                  <div className="flex justify-between text-lg">
-                    <span className="font-bold">Total Price</span>
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-gray-900">Total Price</span>
                     <span className="font-bold text-blue-900 text-2xl">{formatCurrency(selectedPlot.price)}</span>
                   </div>
                 </div>
               </div>
-
+              
               <div className="flex gap-3">
-                <button
-                  onClick={() => setShowPurchaseModal(false)}
-                  className="flex-1 py-3.5 border-2 border-gray-300 rounded-xl font-semibold hover:bg-gray-50"
-                >
+                <button onClick={() => setShowPurchaseModal(false)} className="flex-1 py-3.5 border-2 border-gray-300 rounded-xl font-semibold hover:bg-gray-50 transition-all">
                   Cancel
                 </button>
-                <button
-                  onClick={handleProceedToPayment}
-                  className="flex-1 py-3.5 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-800"
-                >
+                <button onClick={handleProceedToPayment} className="flex-1 py-3.5 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-800 transition-all shadow-lg">
                   Proceed to Pay
                 </button>
               </div>
