@@ -11,6 +11,7 @@ import PlotDetails from './components/PlotDetails';
 import PaymentPage from './components/PaymentPage';
 import Portfolio from './components/Portfolio';
 import DocumentVerification from './components/DocumentVerification';
+import DocumentUpload from './components/DocumentUpload';
 import GovernorsConsent from './components/GovernorsConsent';
 import GroundRent from './components/GroundRent';
 import HelpCenter from './components/HelpCenter';
@@ -51,6 +52,7 @@ function AppContent({ user, token, onLogin, onLogout }: any) {
         <Route path="/payment" element={user ? <PaymentPage /> : <Navigate to="/auth" />} />
         <Route path="/portfolio" element={user ? <Portfolio /> : <Navigate to="/auth" />} />
         <Route path="/verify" element={<DocumentVerification />} />
+        <Route path="/upload-documents" element={user ? <DocumentUpload /> : <Navigate to="/auth" />} />
         <Route path="/governors-consent" element={user ? <GovernorsConsent /> : <Navigate to="/auth" />} />
         <Route path="/ground-rent" element={user ? <GroundRent /> : <Navigate to="/auth" />} />
         <Route path="/help" element={<HelpCenter />} />
