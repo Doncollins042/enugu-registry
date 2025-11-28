@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, CreditCard, Building2, CheckCircle, Shield, Lock,
   Smartphone, Wallet, Copy, Clock, AlertCircle, X, QrCode,
-  Banknote, Globe, ChevronRight, Loader2
+  ChevronRight, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -13,6 +13,7 @@ interface PaymentState {
   description: string;
   reference: string;
   returnUrl?: string;
+  estateName?: string;
   plotDetails?: {
     plot_number: string;
     size: number;
@@ -30,7 +31,6 @@ export default function Payment() {
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank' | 'ussd' | 'crypto'>('card');
   const [processing, setProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   // Card form state
   const [cardNumber, setCardNumber] = useState('');
@@ -70,24 +70,34 @@ export default function Payment() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    setCopied(true);
     toast.success('Copied to clipboard!');
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const handlePayment = async () => {
     setProcessing(true);
 
     // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2500));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Mark as paid in localStorage (for demo)
+    // Mark as paid in localStorage for Search Fee
     if (paymentData.type === 'Plot Search Fee') {
-      const paidEstates = JSON.parse(localStorage.getItem('paidSearchFees') || '[]');
-      const estateName = paymentData.description.replace('Survey Plan Access - ', '');
-      if (!paidEstates.includes(estateName)) {
-        paidEstates.push(estateName);
-        localStorage.setItem('paidSearchFees', JSON.stringify(paidEstates));
+      try {
+        // Extract estate name from description
+        let estateName = paymentData.estateName || '';
+        if (!estateName && paymentData.description) {
+          estateName = paymentData.description.replace('Survey Plan Access - ', '');
+        }
+        
+        if (estateName) {
+          const paidEstates = JSON.parse(localStorage.getItem('paidSearchFees') || '[]');
+          if (!paidEstates.includes(estateName)) {
+            paidEstates.push(estateName);
+            localStorage.setItem('paidSearchFees', JSON.stringify(paidEstates));
+            console.log('Saved paid estate:', estateName, paidEstates);
+          }
+        }
+      } catch (e) {
+        console.error('Error saving to localStorage:', e);
       }
     }
 
@@ -96,8 +106,14 @@ export default function Payment() {
   };
 
   const handleSuccessContinue = () => {
-    if (paymentData.returnUrl) {
-      navigate(paymentData.returnUrl, { state: { paymentSuccess: true } });
+    if (paymentData.type === 'Plot Search Fee' && paymentData.returnUrl) {
+      // Navigate back to estate with payment success flag
+      navigate(paymentData.returnUrl, { 
+        state: { paymentSuccess: true },
+        replace: true 
+      });
+    } else if (paymentData.returnUrl) {
+      navigate(paymentData.returnUrl);
     } else {
       navigate('/dashboard');
     }
@@ -107,11 +123,6 @@ export default function Payment() {
     bankName: 'First Bank of Nigeria',
     accountNumber: '3124567890',
     accountName: 'Enugu State Land Registry',
-  };
-
-  const cryptoAddresses = {
-    btc: '3FZbgi29cpjq2GjdwV8eyHuJJnkLtktZc5',
-    usdt: 'TN9RRaXkCFK3a5J9PDfyT2JhKLYkFp8cqx',
   };
 
   if (!paymentData) {
@@ -157,7 +168,7 @@ export default function Payment() {
                 </div>
                 <div>
                   <p className="font-semibold text-blue-900">Access Granted!</p>
-                  <p className="text-sm text-blue-700 mt-1">You now have full access to the survey plan and all available plots. You can view, select, and purchase any available plot.</p>
+                  <p className="text-sm text-blue-700 mt-1">You now have full access to the survey plan and all available plots.</p>
                 </div>
               </div>
             </div>
@@ -171,7 +182,7 @@ export default function Payment() {
                 </div>
                 <div>
                   <p className="font-semibold text-emerald-900">Plot Reserved!</p>
-                  <p className="text-sm text-emerald-700 mt-1">Plot <span className="font-bold">{paymentData.plotDetails.plot_number}</span> has been reserved for you. Our team will contact you within 24 hours to complete the documentation.</p>
+                  <p className="text-sm text-emerald-700 mt-1">Plot <span className="font-bold">{paymentData.plotDetails.plot_number}</span> has been reserved. Our team will contact you within 24 hours.</p>
                 </div>
               </div>
             </div>
@@ -181,11 +192,11 @@ export default function Payment() {
             onClick={handleSuccessContinue}
             className="w-full py-4 bg-gradient-to-r from-blue-900 to-blue-800 text-white rounded-xl font-bold hover:from-blue-800 hover:to-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20"
           >
-            {paymentData.type === 'Plot Search Fee' ? 'View Survey Plan' : 'Go to Dashboard'}
+            {paymentData.type === 'Plot Search Fee' ? 'View Survey Plan & Plots' : 'Go to Dashboard'}
             <ChevronRight className="w-5 h-5" />
           </button>
 
-          <p className="text-xs text-gray-500 mt-4">A receipt has been sent to your email address</p>
+          <p className="text-xs text-gray-500 mt-4">A receipt has been sent to your email</p>
         </div>
       </div>
     );
@@ -234,14 +245,6 @@ export default function Payment() {
                     <p className="text-blue-200">Size</p>
                     <p className="font-semibold">{paymentData.plotDetails.size} sqm</p>
                   </div>
-                  <div>
-                    <p className="text-blue-200">Type</p>
-                    <p className="font-semibold">{paymentData.plotDetails.type}</p>
-                  </div>
-                  <div>
-                    <p className="text-blue-200">Location</p>
-                    <p className="font-semibold">{paymentData.plotDetails.location}</p>
-                  </div>
                 </div>
               )}
             </div>
@@ -287,7 +290,7 @@ export default function Payment() {
           </div>
         </div>
 
-        {/* Payment Form Based on Method */}
+        {/* Payment Form */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
           {/* Card Payment */}
           {paymentMethod === 'card' && (
@@ -329,7 +332,7 @@ export default function Payment() {
                     onChange={(e) => setExpiryDate(formatExpiryDate(e.target.value))}
                     placeholder="MM/YY"
                     maxLength={5}
-                    className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg tracking-wider"
+                    className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg"
                   />
                 </div>
                 <div>
@@ -340,14 +343,14 @@ export default function Payment() {
                     onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
                     placeholder="•••"
                     maxLength={4}
-                    className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg tracking-wider"
+                    className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg"
                   />
                 </div>
               </div>
 
               <div className="flex items-center gap-2 text-xs text-gray-500 mt-4 bg-gray-50 rounded-lg p-3">
                 <Shield className="w-4 h-4 text-emerald-500" />
-                <span>Your card details are encrypted and secure. We do not store your card information.</span>
+                <span>Your card details are encrypted and secure</span>
               </div>
             </div>
           )}
@@ -362,7 +365,7 @@ export default function Payment() {
                   <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
                     <p className="font-semibold text-amber-800">Transfer exactly {formatCurrency(paymentData.amount)}</p>
-                    <p className="text-amber-700 mt-1">Your payment will be confirmed automatically within 5 minutes after transfer.</p>
+                    <p className="text-amber-700 mt-1">Payment confirmed automatically within 5 minutes.</p>
                   </div>
                 </div>
               </div>
@@ -373,10 +376,7 @@ export default function Payment() {
                     <p className="text-sm text-gray-500">Bank Name</p>
                     <p className="font-bold text-gray-900 text-lg">{bankDetails.bankName}</p>
                   </div>
-                  <button
-                    onClick={() => copyToClipboard(bankDetails.bankName)}
-                    className="p-2.5 hover:bg-gray-200 rounded-lg transition-all"
-                  >
+                  <button onClick={() => copyToClipboard(bankDetails.bankName)} className="p-2.5 hover:bg-gray-200 rounded-lg">
                     <Copy className="w-5 h-5 text-gray-500" />
                   </button>
                 </div>
@@ -384,12 +384,9 @@ export default function Payment() {
                 <div className="flex justify-between items-center pb-4 border-b border-gray-200">
                   <div>
                     <p className="text-sm text-gray-500">Account Number</p>
-                    <p className="font-bold text-gray-900 text-2xl font-mono tracking-wider">{bankDetails.accountNumber}</p>
+                    <p className="font-bold text-gray-900 text-2xl font-mono">{bankDetails.accountNumber}</p>
                   </div>
-                  <button
-                    onClick={() => copyToClipboard(bankDetails.accountNumber)}
-                    className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition-all"
-                  >
+                  <button onClick={() => copyToClipboard(bankDetails.accountNumber)} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200">
                     Copy
                   </button>
                 </div>
@@ -399,23 +396,17 @@ export default function Payment() {
                     <p className="text-sm text-gray-500">Account Name</p>
                     <p className="font-bold text-gray-900">{bankDetails.accountName}</p>
                   </div>
-                  <button
-                    onClick={() => copyToClipboard(bankDetails.accountName)}
-                    className="p-2.5 hover:bg-gray-200 rounded-lg transition-all"
-                  >
+                  <button onClick={() => copyToClipboard(bankDetails.accountName)} className="p-2.5 hover:bg-gray-200 rounded-lg">
                     <Copy className="w-5 h-5 text-gray-500" />
                   </button>
                 </div>
 
                 <div className="flex justify-between items-center bg-blue-50 rounded-lg p-4">
                   <div>
-                    <p className="text-sm text-blue-600">Amount to Transfer</p>
+                    <p className="text-sm text-blue-600">Amount</p>
                     <p className="font-bold text-blue-900 text-2xl">{formatCurrency(paymentData.amount)}</p>
                   </div>
-                  <button
-                    onClick={() => copyToClipboard(paymentData.amount.toString())}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all"
-                  >
+                  <button onClick={() => copyToClipboard(paymentData.amount.toString())} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
                     Copy
                   </button>
                 </div>
@@ -428,41 +419,24 @@ export default function Payment() {
             <div className="space-y-4">
               <h3 className="font-bold text-gray-900 mb-4">Pay with USSD</h3>
               
-              <p className="text-sm text-gray-600 mb-4">Dial any of the USSD codes below from your registered phone number to complete payment.</p>
-              
               <div className="space-y-3">
                 {[
-                  { bank: 'GTBank', code: `*737*2*${paymentData.amount}#`, color: 'orange' },
-                  { bank: 'First Bank', code: `*894*${paymentData.amount}#`, color: 'blue' },
-                  { bank: 'UBA', code: `*919*4*${paymentData.amount}#`, color: 'red' },
-                  { bank: 'Access Bank', code: `*901*${paymentData.amount}#`, color: 'orange' },
-                  { bank: 'Zenith Bank', code: `*966*${paymentData.amount}#`, color: 'red' },
+                  { bank: 'GTBank', code: `*737*2*${paymentData.amount}#` },
+                  { bank: 'First Bank', code: `*894*${paymentData.amount}#` },
+                  { bank: 'UBA', code: `*919*4*${paymentData.amount}#` },
+                  { bank: 'Access Bank', code: `*901*${paymentData.amount}#` },
+                  { bank: 'Zenith Bank', code: `*966*${paymentData.amount}#` },
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-all">
+                  <div key={i} className="flex items-center justify-between bg-gray-50 rounded-xl p-4">
                     <div>
                       <p className="font-semibold text-gray-900">{item.bank}</p>
                       <p className="text-sm text-gray-600 font-mono mt-1">{item.code}</p>
                     </div>
-                    <button
-                      onClick={() => copyToClipboard(item.code)}
-                      className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition-all"
-                    >
+                    <button onClick={() => copyToClipboard(item.code)} className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200">
                       Copy
                     </button>
                   </div>
                 ))}
-              </div>
-
-              <div className="bg-gray-100 rounded-xl p-4 mt-4">
-                <p className="text-sm text-gray-600">
-                  <strong>How to pay:</strong>
-                </p>
-                <ol className="text-sm text-gray-600 mt-2 space-y-1 list-decimal list-inside">
-                  <li>Copy the USSD code for your bank</li>
-                  <li>Dial the code on your phone</li>
-                  <li>Follow the prompts to complete payment</li>
-                  <li>Click "I have made this payment" below</li>
-                </ol>
               </div>
             </div>
           )}
@@ -473,17 +447,11 @@ export default function Payment() {
               <h3 className="font-bold text-gray-900 mb-4">Pay with Cryptocurrency</h3>
               
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <button className="p-4 border-2 border-amber-400 bg-amber-50 rounded-xl text-center transition-all hover:shadow-md">
-                  <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <span className="text-amber-600 font-bold">₿</span>
-                  </div>
+                <button className="p-4 border-2 border-amber-400 bg-amber-50 rounded-xl text-center">
                   <p className="font-bold text-amber-700">Bitcoin (BTC)</p>
                   <p className="text-xs text-gray-500 mt-1">Network: Bitcoin</p>
                 </button>
-                <button className="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-emerald-400 hover:bg-emerald-50 transition-all">
-                  <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <span className="text-emerald-600 font-bold">₮</span>
-                  </div>
+                <button className="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-emerald-400 hover:bg-emerald-50">
                   <p className="font-bold text-gray-700">USDT (TRC20)</p>
                   <p className="text-xs text-gray-500 mt-1">Network: Tron</p>
                 </button>
@@ -491,42 +459,30 @@ export default function Payment() {
 
               <div className="bg-gray-50 rounded-xl p-5">
                 <div className="flex items-center justify-center mb-4">
-                  <div className="w-36 h-36 bg-white rounded-xl flex items-center justify-center border-2 border-gray-200 shadow-inner">
+                  <div className="w-36 h-36 bg-white rounded-xl flex items-center justify-center border-2 border-gray-200">
                     <QrCode className="w-28 h-28 text-gray-300" />
                   </div>
                 </div>
                 
                 <div className="mb-4">
                   <p className="text-sm text-gray-500 mb-2">BTC Wallet Address</p>
-                  <div className="flex items-center gap-2 bg-white rounded-lg p-3 border border-gray-200">
-                    <code className="text-xs flex-1 break-all text-gray-700">{cryptoAddresses.btc}</code>
-                    <button
-                      onClick={() => copyToClipboard(cryptoAddresses.btc)}
-                      className="p-2 bg-blue-100 hover:bg-blue-200 rounded-lg flex-shrink-0 transition-all"
-                    >
+                  <div className="flex items-center gap-2 bg-white rounded-lg p-3 border">
+                    <code className="text-xs flex-1 break-all">3FZbgi29cpjq2GjdwV8eyHuJJnkLtktZc5</code>
+                    <button onClick={() => copyToClipboard('3FZbgi29cpjq2GjdwV8eyHuJJnkLtktZc5')} className="p-2 bg-blue-100 hover:bg-blue-200 rounded-lg">
                       <Copy className="w-4 h-4 text-blue-600" />
                     </button>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <div className="bg-white rounded-lg p-4 border">
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-gray-500">Amount in NGN</span>
                     <span className="font-bold">{formatCurrency(paymentData.amount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Amount in BTC (approx)</span>
+                    <span className="text-gray-500">Amount in BTC</span>
                     <span className="font-bold font-mono">{(paymentData.amount / 150000000).toFixed(8)} BTC</span>
                   </div>
-                </div>
-              </div>
-
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-amber-800">
-                    <strong>Important:</strong> Send only BTC to this address. Sending other cryptocurrencies may result in permanent loss of funds.
-                  </p>
                 </div>
               </div>
             </div>
@@ -540,12 +496,12 @@ export default function Payment() {
           <button
             onClick={handlePayment}
             disabled={processing}
-            className="w-full py-4 bg-gradient-to-r from-blue-900 to-blue-800 text-white rounded-xl font-bold hover:from-blue-800 hover:to-blue-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20"
+            className="w-full py-4 bg-gradient-to-r from-blue-900 to-blue-800 text-white rounded-xl font-bold hover:from-blue-800 hover:to-blue-700 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg"
           >
             {processing ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Processing Payment...
+                Processing...
               </>
             ) : (
               <>
