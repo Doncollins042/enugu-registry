@@ -2,10 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, CreditCard, Building2, CheckCircle, Shield, Lock,
-  Smartphone, Wallet, Copy, Clock, AlertCircle, X, QrCode,
-  ChevronRight, Loader2
+  Smartphone, Wallet, Copy, Clock, AlertCircle, QrCode,
+  ChevronRight, Loader2, Home, MapPin, Receipt, FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+interface FeeBreakdown {
+  propertyPrice: number;
+  legalFee: number;
+  surveyFee: number;
+  deedOfAssignmentFee: number;
+  developmentLevy: number;
+  agencyFee: number;
+  stampDuty: number;
+  registrationFee: number;
+  totalFees: number;
+  grandTotal: number;
+}
 
 interface PaymentState {
   type: string;
@@ -20,7 +33,9 @@ interface PaymentState {
     type: string;
     estate: string;
     location: string;
+    price?: number;
   };
+  feeBreakdown?: FeeBreakdown;
 }
 
 export default function Payment() {
@@ -82,7 +97,6 @@ export default function Payment() {
     // Mark as paid in localStorage for Search Fee
     if (paymentData.type === 'Plot Search Fee') {
       try {
-        // Extract estate name from description
         let estateName = paymentData.estateName || '';
         if (!estateName && paymentData.description) {
           estateName = paymentData.description.replace('Survey Plan Access - ', '');
@@ -93,7 +107,6 @@ export default function Payment() {
           if (!paidEstates.includes(estateName)) {
             paidEstates.push(estateName);
             localStorage.setItem('paidSearchFees', JSON.stringify(paidEstates));
-            console.log('Saved paid estate:', estateName, paidEstates);
           }
         }
       } catch (e) {
@@ -107,7 +120,6 @@ export default function Payment() {
 
   const handleSuccessContinue = () => {
     if (paymentData.type === 'Plot Search Fee' && paymentData.returnUrl) {
-      // Navigate back to estate with payment success flag
       navigate(paymentData.returnUrl, { 
         state: { paymentSuccess: true },
         replace: true 
@@ -178,12 +190,29 @@ export default function Payment() {
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 text-left">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-5 h-5 text-emerald-600" />
+                  <Home className="w-5 h-5 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="font-semibold text-emerald-900">Plot Reserved!</p>
-                  <p className="text-sm text-emerald-700 mt-1">Plot <span className="font-bold">{paymentData.plotDetails.plot_number}</span> has been reserved. Our team will contact you within 24 hours.</p>
+                  <p className="font-semibold text-emerald-900">Property Reserved!</p>
+                  <p className="text-sm text-emerald-700 mt-1">
+                    Plot <span className="font-bold">{paymentData.plotDetails.plot_number}</span> at {paymentData.plotDetails.estate} has been reserved for you.
+                  </p>
                 </div>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t border-emerald-200">
+                <p className="text-sm font-semibold text-emerald-900 mb-2">What happens next?</p>
+                <ul className="text-sm text-emerald-700 space-y-1">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" /> Allocation letter within 48 hours
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" /> Our team will contact you
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" /> Title documents in 90 days
+                  </li>
+                </ul>
               </div>
             </div>
           )}
@@ -228,7 +257,7 @@ export default function Payment() {
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl"></div>
           
           <div className="relative">
-            <p className="text-blue-200 text-sm mb-1">Amount to Pay</p>
+            <p className="text-blue-200 text-sm mb-1">Total Amount to Pay</p>
             <p className="text-4xl font-bold mb-4">{formatCurrency(paymentData.amount)}</p>
             
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
@@ -244,6 +273,62 @@ export default function Payment() {
                   <div>
                     <p className="text-blue-200">Size</p>
                     <p className="font-semibold">{paymentData.plotDetails.size} sqm</p>
+                  </div>
+                  <div>
+                    <p className="text-blue-200">Type</p>
+                    <p className="font-semibold">{paymentData.plotDetails.type}</p>
+                  </div>
+                  <div>
+                    <p className="text-blue-200">Location</p>
+                    <p className="font-semibold">{paymentData.plotDetails.location}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Fee Breakdown for Property Purchase */}
+              {paymentData.type === 'Property Purchase' && paymentData.feeBreakdown && (
+                <div className="mt-3 pt-3 border-t border-white/20">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Receipt className="w-4 h-4 text-amber-400" />
+                    <p className="text-amber-400 text-sm font-semibold">Payment Breakdown</p>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Property Price</span>
+                      <span className="font-medium">{formatCurrency(paymentData.feeBreakdown.propertyPrice)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Legal Fee (5%)</span>
+                      <span className="font-medium">{formatCurrency(paymentData.feeBreakdown.legalFee)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Survey Fee</span>
+                      <span className="font-medium">{formatCurrency(paymentData.feeBreakdown.surveyFee)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Deed of Assignment</span>
+                      <span className="font-medium">{formatCurrency(paymentData.feeBreakdown.deedOfAssignmentFee)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Development Levy (1%)</span>
+                      <span className="font-medium">{formatCurrency(paymentData.feeBreakdown.developmentLevy)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Agency Fee (2.5%)</span>
+                      <span className="font-medium">{formatCurrency(paymentData.feeBreakdown.agencyFee)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Stamp Duty (1.5%)</span>
+                      <span className="font-medium">{formatCurrency(paymentData.feeBreakdown.stampDuty)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Registration Fee</span>
+                      <span className="font-medium">{formatCurrency(paymentData.feeBreakdown.registrationFee)}</span>
+                    </div>
+                    <div className="flex justify-between pt-3 mt-3 border-t border-white/20">
+                      <span className="font-bold">Grand Total</span>
+                      <span className="font-bold text-amber-400 text-lg">{formatCurrency(paymentData.feeBreakdown.grandTotal)}</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -438,6 +523,16 @@ export default function Payment() {
                   </div>
                 ))}
               </div>
+
+              <div className="bg-gray-100 rounded-xl p-4 mt-4">
+                <p className="text-sm text-gray-700 font-medium mb-2">How to pay:</p>
+                <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+                  <li>Copy the USSD code for your bank</li>
+                  <li>Dial the code on your phone</li>
+                  <li>Follow the prompts to complete</li>
+                  <li>Click "I have made this payment"</li>
+                </ol>
+              </div>
             </div>
           )}
 
@@ -483,6 +578,15 @@ export default function Payment() {
                     <span className="text-gray-500">Amount in BTC</span>
                     <span className="font-bold font-mono">{(paymentData.amount / 150000000).toFixed(8)} BTC</span>
                   </div>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-amber-800">
+                    <strong>Important:</strong> Send only BTC to this address. Other cryptocurrencies may be lost.
+                  </p>
                 </div>
               </div>
             </div>
