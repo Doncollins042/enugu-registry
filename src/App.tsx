@@ -9,29 +9,26 @@ import Dashboard from './components/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Main Features
-import PropertySearch from './components/PropertySearch';
-import PropertyDetails from './components/PropertyDetails';
+import AdvancedSearch from './components/AdvancedSearch';
 import EstateDetails from './components/EstateDetails';
 import Payment from './components/Payment';
 import LandPaymentSummary from './components/LandPaymentSummary';
-import Profile from './components/Profile';
 import Settings from './components/Settings';
-import Notifications from './components/Notifications';
+import UserSettings from './components/UserSettings';
 
 // Government Services
-import GovernmentServices from './components/GovernmentServices';
-import TitleVerification from './components/TitleVerification';
-import DocumentAuthentication from './components/DocumentAuthentication';
-import SurveyRequest from './components/SurveyRequest';
-import TaxCalculator from './components/TaxCalculator';
-import DisputeResolution from './components/DisputeResolution';
-import NameSearch from './components/NameSearch';
+import DocumentVerification from './components/DocumentVerification';
+import DocumentUpload from './components/DocumentUpload';
+import GovernorsConsent from './components/GovernorsConsent';
+import GroundRent from './components/GroundRent';
+import SurveyPlan from './components/SurveyPlan';
 
 // Additional Pages
-import MyProperties from './components/MyProperties';
-import Transactions from './components/Transactions';
-import Support from './components/Support';
-import FAQ from './components/FAQ';
+import Portfolio from './components/Portfolio';
+import HelpCenter from './components/HelpCenter';
+import Reports from './components/Reports';
+import AdminDashboard from './components/AdminDashboard';
+import LandingPage from './components/LandingPage';
 
 function App() {
   return (
@@ -73,6 +70,7 @@ function App() {
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/landing" element={<LandingPage />} />
           
           {/* Protected Routes */}
           <Route path="/dashboard" element={
@@ -83,13 +81,7 @@ function App() {
           
           <Route path="/search" element={
             <ProtectedRoute>
-              <PropertySearch />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/property/:id" element={
-            <ProtectedRoute>
-              <PropertyDetails />
+              <AdvancedSearch />
             </ProtectedRoute>
           } />
           
@@ -111,89 +103,83 @@ function App() {
             </ProtectedRoute>
           } />
           
-          <Route path="/profile" element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          } />
-          
           <Route path="/settings" element={
             <ProtectedRoute>
               <Settings />
             </ProtectedRoute>
           } />
           
-          <Route path="/notifications" element={
+          <Route path="/user-settings" element={
             <ProtectedRoute>
-              <Notifications />
+              <UserSettings />
             </ProtectedRoute>
           } />
           
           {/* Government Services */}
-          <Route path="/services" element={
+          <Route path="/services/document-verification" element={
             <ProtectedRoute>
-              <GovernmentServices />
+              <DocumentVerification />
             </ProtectedRoute>
           } />
           
-          <Route path="/services/title-verification" element={
+          <Route path="/services/document-upload" element={
             <ProtectedRoute>
-              <TitleVerification />
+              <DocumentUpload />
             </ProtectedRoute>
           } />
           
-          <Route path="/services/document-authentication" element={
+          <Route path="/services/governors-consent" element={
             <ProtectedRoute>
-              <DocumentAuthentication />
+              <GovernorsConsent />
             </ProtectedRoute>
           } />
           
-          <Route path="/services/survey-request" element={
+          <Route path="/services/ground-rent" element={
             <ProtectedRoute>
-              <SurveyRequest />
+              <GroundRent />
             </ProtectedRoute>
           } />
           
-          <Route path="/services/tax-calculator" element={
+          <Route path="/services/survey-plan" element={
             <ProtectedRoute>
-              <TaxCalculator />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/services/dispute-resolution" element={
-            <ProtectedRoute>
-              <DisputeResolution />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/services/name-search" element={
-            <ProtectedRoute>
-              <NameSearch />
+              <SurveyPlan />
             </ProtectedRoute>
           } />
           
           {/* Additional Pages */}
-          <Route path="/my-properties" element={
+          <Route path="/portfolio" element={
             <ProtectedRoute>
-              <MyProperties />
+              <Portfolio />
             </ProtectedRoute>
           } />
           
-          <Route path="/transactions" element={
+          <Route path="/my-properties" element={
             <ProtectedRoute>
-              <Transactions />
+              <Portfolio />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/help" element={
+            <ProtectedRoute>
+              <HelpCenter />
             </ProtectedRoute>
           } />
           
           <Route path="/support" element={
             <ProtectedRoute>
-              <Support />
+              <HelpCenter />
             </ProtectedRoute>
           } />
           
-          <Route path="/faq" element={
+          <Route path="/reports" element={
             <ProtectedRoute>
-              <FAQ />
+              <Reports />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminDashboard />
             </ProtectedRoute>
           } />
           
