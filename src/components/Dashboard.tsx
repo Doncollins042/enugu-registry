@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Home, Building2, FileText, CreditCard, Users, Settings as SettingsIcon,
-  Menu, X, ChevronDown, ChevronRight, Bell, Search, LogOut, Shield,
-  MapPin, Wallet, HelpCircle, FileSearch, Scale, Receipt, Upload, Sparkles
+import {
+  Search, Bell, User, MapPin, ChevronRight, Shield, Home,
+  FileText, Building2, TrendingUp, Menu, X, LogOut,
+  Settings, HelpCircle, Wallet, Clock, CheckCircle, Star
 } from 'lucide-react';
 import { api } from '../services/api';
 import toast from 'react-hot-toast';
@@ -22,392 +22,249 @@ interface Estate {
   status: string;
 }
 
-interface DashboardProps {
-  user: any;
-  onLogout: () => void;
-}
-
-export default function Dashboard({ user, onLogout }: DashboardProps) {
+export default function Dashboard() {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [servicesOpen, setServicesOpen] = useState(false);
   const [estates, setEstates] = useState<Estate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showAll, setShowAll] = useState(false);
-  const estatesPerPage = 6;
+  const [showMenu, setShowMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    fetchEstates();
+    fetchData();
   }, []);
 
-  const fetchEstates = async () => {
+  const fetchData = async () => {
     try {
-      const data = await api.getEstates();
-      if (Array.isArray(data)) {
-        setEstates(data);
-      }
+      setLoading(true);
+      const [estatesData, userData] = await Promise.all([
+        api.getEstates(),
+        api.getProfile()
+      ]);
+      setEstates(estatesData || []);
+      setUser(userData);
     } catch (error) {
-      console.error('Error fetching estates:', error);
+      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatCurrency = (amount: string) => {
-    return '₦' + parseInt(amount).toLocaleString();
+  const formatPrice = (price: string) => {
+    const num = parseInt(price);
+    if (num >= 1000000) return '₦' + (num / 1000000).toFixed(1) + 'M';
+    return '₦' + (num / 1000).toFixed(0) + 'K';
   };
-
-  const displayedEstates = showAll 
-    ? estates.slice((currentPage - 1) * estatesPerPage, currentPage * estatesPerPage)
-    : estates.slice(0, 4);
-
-  const totalPages = Math.ceil(estates.length / estatesPerPage);
-
-  const menuItems = [
-    { name: 'Dashboard', icon: Home, path: '/dashboard', active: true },
-    { name: 'Browse Properties', icon: Building2, path: '/search' },
-    { name: 'My Portfolio', icon: Wallet, path: '/portfolio' },
-    { 
-      name: 'Services', 
-      icon: FileText, 
-      submenu: true,
-      items: [
-        { name: 'Verify Document', icon: FileSearch, path: '/verify' },
-        { name: 'Upload Documents', icon: Upload, path: '/upload-documents' },
-        { name: "Governor's Consent", icon: Scale, path: '/governors-consent' },
-        { name: 'Ground Rent', icon: Receipt, path: '/ground-rent' },
-      ]
-    },
-    { name: 'Help Center', icon: HelpCircle, path: '/help' },
-    { name: 'Settings', icon: SettingsIcon, path: '/settings' },
-  ];
-
-  const quickActions = [
-    { name: 'Buy Property', icon: Building2, path: '/search', color: 'from-blue-600 to-blue-700' },
-    { name: 'Verify Doc', icon: FileSearch, path: '/verify', color: 'from-emerald-500 to-emerald-600' },
-    { name: 'Upload Docs', icon: Upload, path: '/upload-documents', color: 'from-purple-500 to-purple-600' },
-    { name: 'Get Help', icon: HelpCircle, path: '/help', color: 'from-amber-500 to-amber-600' },
-  ];
 
   const handleLogout = () => {
-    onLogout();
-    navigate('/');
-    toast.success('Logged out successfully');
+    api.logout();
+    toast.success('Logged out');
+    navigate('/login');
   };
 
-  const handleEstateClick = (estate: Estate) => {
-    // Use slug if available, otherwise use id
-    const identifier = estate.slug || estate.id;
-    navigate(`/estate/${identifier}`);
-  };
+  const quickServices = [
+    { icon: Shield, label: 'Verify Title', path: '/services/document-verification', color: 'bg-blue-500' },
+    { icon: FileText, label: 'Documents', path: '/services/document-upload', color: 'bg-emerald-500' },
+    { icon: Building2, label: 'Survey Plan', path: '/services/survey-plan', color: 'bg-purple-500' },
+    { icon: Wallet, label: 'Ground Rent', path: '/services/ground-rent', color: 'bg-amber-500' },
+  ];
+
+  const filteredEstates = estates.filter(e => 
+    e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    e.location.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
-      {/* Mobile Header */}
-      <header className="lg:hidden bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-30 border-b border-gray-100">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-gray-100 rounded-xl">
-            <Menu className="w-6 h-6 text-gray-700" />
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-900 rounded-lg flex items-center justify-center">
-              <Home className="w-4 h-4 text-amber-400" />
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-blue-900 to-blue-800 text-white sticky top-0 z-40">
+        <div className="px-3 py-3 sm:px-4 sm:py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowMenu(true)} className="p-1.5 hover:bg-white/10 rounded-lg lg:hidden">
+                <Menu className="w-5 h-5" />
+              </button>
+              <div>
+                <p className="text-blue-200 text-[10px] sm:text-xs">Welcome back</p>
+                <h1 className="font-bold text-sm sm:text-base truncate max-w-[150px] sm:max-w-none">{user?.name || 'User'}</h1>
+              </div>
             </div>
-            <span className="font-bold text-gray-900">ES-DLRTH</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <button className="p-1.5 sm:p-2 bg-white/10 rounded-lg relative">
+                <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+              <button onClick={() => navigate('/settings')} className="p-1.5 sm:p-2 bg-white/10 rounded-lg">
+                <User className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            </div>
           </div>
-          <button className="p-2 hover:bg-gray-100 rounded-xl relative">
-            <Bell className="w-6 h-6 text-gray-700" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
+
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search estates, locations..."
+              className="w-full pl-9 pr-3 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            />
+          </div>
         </div>
       </header>
 
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
+      {/* Mobile Menu */}
+      {showMenu && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowMenu(false)}></div>
+          <div className="absolute left-0 top-0 bottom-0 w-64 bg-white shadow-xl">
+            <div className="p-4 bg-gradient-to-r from-blue-900 to-blue-800 text-white">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Shield className="w-4 h-4" />
+                  </div>
+                  <span className="font-bold text-sm">Enugu Land Registry</span>
+                </div>
+                <button onClick={() => setShowMenu(false)} className="p-1 hover:bg-white/10 rounded">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center font-bold">
+                  {user?.name?.charAt(0) || 'U'}
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">{user?.name || 'User'}</p>
+                  <p className="text-blue-200 text-xs truncate max-w-[140px]">{user?.email}</p>
+                </div>
+              </div>
+            </div>
+            <nav className="p-3">
+              {[
+                { icon: Home, label: 'Dashboard', path: '/dashboard' },
+                { icon: Building2, label: 'My Properties', path: '/portfolio' },
+                { icon: FileText, label: 'Documents', path: '/services/document-upload' },
+                { icon: Shield, label: 'Verify Title', path: '/services/document-verification' },
+                { icon: Settings, label: 'Settings', path: '/settings' },
+                { icon: HelpCircle, label: 'Help Center', path: '/help' },
+              ].map((item) => (
+                <button key={item.path} onClick={() => { navigate(item.path); setShowMenu(false); }} className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-100 text-gray-700 text-sm">
+                  <item.icon className="w-4 h-4 text-gray-500" />
+                  {item.label}
+                </button>
+              ))}
+              <hr className="my-2" />
+              <button onClick={handleLogout} className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-red-50 text-red-600 text-sm">
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </nav>
+          </div>
+        </div>
       )}
 
-      {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 h-full w-72 bg-white shadow-xl z-50 transform transition-transform duration-300 lg:translate-x-0 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-900 rounded-xl flex items-center justify-center">
-              <Home className="w-5 h-5 text-amber-400" />
-            </div>
-            <div>
-              <h1 className="font-bold text-gray-900">ES-DLRTH</h1>
-              <p className="text-xs text-gray-500">Land Registry</p>
-            </div>
+      <main className="px-3 py-4 sm:px-4 pb-20">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-3 text-white">
+            <Building2 className="w-5 h-5 mb-1 opacity-80" />
+            <p className="text-lg sm:text-xl font-bold">{estates.length}</p>
+            <p className="text-[10px] sm:text-xs text-blue-100">Total Estates</p>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 hover:bg-gray-100 rounded-xl">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* User Profile */}
-        <div className="p-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center text-white font-bold text-lg ring-2 ring-blue-100">
-              {user?.full_name?.charAt(0) || 'U'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-gray-900 truncate">{user?.full_name || 'User'}</p>
-              <p className="text-sm text-gray-500 truncate">{user?.email}</p>
-            </div>
+          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-3 text-white">
+            <CheckCircle className="w-5 h-5 mb-1 opacity-80" />
+            <p className="text-lg sm:text-xl font-bold">{estates.reduce((a, e) => a + e.available_plots, 0)}</p>
+            <p className="text-[10px] sm:text-xs text-emerald-100">Available Plots</p>
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100%-200px)]">
-          {menuItems.map((item) => (
-            <div key={item.name}>
-              {item.submenu ? (
-                <>
-                  <button
-                    onClick={() => setServicesOpen(!servicesOpen)}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-all"
-                  >
-                    <div className="flex items-center gap-3">
-                      <item.icon className="w-5 h-5" />
-                      <span className="font-medium">{item.name}</span>
-                    </div>
-                    <ChevronDown className={`w-4 h-4 transition-transform ${servicesOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  {servicesOpen && (
-                    <div className="ml-4 mt-1 space-y-1">
-                      {item.items?.map((subItem) => (
-                        <button
-                          key={subItem.name}
-                          onClick={() => {
-                            navigate(subItem.path);
-                            setSidebarOpen(false);
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
-                        >
-                          <subItem.icon className="w-4 h-4" />
-                          <span className="text-sm">{subItem.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <button
-                  onClick={() => {
-                    navigate(item.path);
-                    setSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    item.active 
-                      ? 'bg-blue-900 text-white shadow-lg shadow-blue-900/30' 
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <item.icon className={`w-5 h-5 ${item.active ? '' : 'group-hover:scale-110'} transition-transform`} />
-                  <span className="font-medium">{item.name}</span>
-                </button>
-              )}
-            </div>
-          ))}
-
-          {/* Admin Panel Link */}
-          {user?.role === 'admin' && (
-            <button
-              onClick={() => {
-                navigate('/admin');
-                setSidebarOpen(false);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-purple-700 bg-purple-50 hover:bg-purple-100 transition-all mt-4"
-            >
-              <Shield className="w-5 h-5" />
-              <span className="font-medium">Admin Panel</span>
-            </button>
-          )}
-        </nav>
-
-        {/* Logout */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-white">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="lg:ml-72 min-h-screen">
-        <div className="p-4 lg:p-6 max-w-7xl mx-auto">
-          {/* Welcome Banner - Mobile */}
-          <div className="lg:hidden bg-gradient-to-r from-blue-900 to-blue-800 rounded-2xl p-4 mb-6 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl"></div>
-            <div className="relative">
-              <div className="flex items-center gap-2 mb-1">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                <span className="text-blue-200 text-sm">Welcome back</span>
-              </div>
-              <h2 className="text-xl font-bold">{user?.full_name?.split(' ')[0] || 'User'}</h2>
-              <p className="text-blue-200 text-sm mt-1">Explore verified properties</p>
-            </div>
+        {/* Quick Services */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-bold text-gray-900 text-sm">Quick Services</h2>
+            <button className="text-blue-600 text-xs font-medium">See All</button>
           </div>
-
-          {/* Desktop Header */}
-          <div className="hidden lg:flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user?.full_name?.split(' ')[0] || 'User'}!</h1>
-              <p className="text-gray-600">Explore government-verified properties in Enugu State</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <button className="p-2 hover:bg-gray-100 rounded-xl relative">
-                <Bell className="w-6 h-6 text-gray-700" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center text-white font-bold">
-                {user?.full_name?.charAt(0) || 'U'}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            {quickActions.map((action) => (
-              <button
-                key={action.name}
-                onClick={() => navigate(action.path)}
-                className={`bg-gradient-to-r ${action.color} text-white rounded-xl p-4 text-left hover:shadow-lg hover:scale-105 transition-all active:scale-95`}
-              >
-                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mb-3">
-                  <action.icon className="w-5 h-5" />
+          <div className="grid grid-cols-4 gap-2">
+            {quickServices.map((service) => (
+              <button key={service.path} onClick={() => navigate(service.path)} className="flex flex-col items-center p-2 bg-white rounded-xl shadow-sm border border-gray-100">
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 ${service.color} rounded-lg flex items-center justify-center mb-1`}>
+                  <service.icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
-                <p className="font-semibold text-sm">{action.name}</p>
+                <span className="text-[9px] sm:text-[10px] text-gray-600 text-center leading-tight">{service.label}</span>
               </button>
             ))}
           </div>
+        </div>
 
-          {/* Featured Estates */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 lg:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <h2 className="text-lg font-bold text-gray-900">Featured Estates</h2>
-                <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                  {estates.length} available
-                </span>
-              </div>
-              <button
-                onClick={() => setShowAll(!showAll)}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                {showAll ? 'Show Less' : 'View All'}
-              </button>
+        {/* Featured Estates */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-bold text-gray-900 text-sm">Featured Estates</h2>
+            <button onClick={() => navigate('/search')} className="text-blue-600 text-xs font-medium flex items-center gap-0.5">
+              View All <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-10">
+              <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
             </div>
-
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-              </div>
-            ) : estates.length === 0 ? (
-              <div className="text-center py-12">
-                <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No estates available yet</p>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {displayedEstates.map((estate) => (
-                    <div
-                      key={estate.id}
-                      onClick={() => handleEstateClick(estate)}
-                      className="group border border-gray-200 rounded-xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer bg-white"
-                    >
-                      <div className="relative h-36 sm:h-40 overflow-hidden">
-                        <img
-                          src={estate.image_url}
-                          alt={estate.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                        <div className="absolute top-2 left-2">
-                          <span className="px-2 py-1 bg-emerald-500 text-white text-xs font-medium rounded-full">
-                            {estate.available_plots} plots
-                          </span>
-                        </div>
-                        <div className="absolute bottom-2 left-2 right-2">
-                          <h3 className="text-white font-bold truncate">{estate.name}</h3>
-                        </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredEstates.map((estate) => (
+                <div key={estate.id} onClick={() => navigate(`/estate/${estate.slug}`)} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden active:scale-[0.98] transition-transform cursor-pointer">
+                  <div className="flex">
+                    <div className="w-24 sm:w-32 h-24 sm:h-28 flex-shrink-0">
+                      <img src={estate.image_url} alt={estate.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 p-2.5 sm:p-3">
+                      <div className="flex items-start justify-between mb-1">
+                        <h3 className="font-bold text-gray-900 text-sm leading-tight">{estate.name}</h3>
+                        <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-bold rounded">
+                          {estate.available_plots} left
+                        </span>
                       </div>
-                      <div className="p-3">
-                        <div className="flex items-center gap-1 text-gray-500 text-sm mb-2">
-                          <MapPin className="w-3 h-3" />
-                          <span className="truncate">{estate.location}</span>
+                      <div className="flex items-center gap-1 text-gray-500 text-[10px] sm:text-xs mb-2">
+                        <MapPin className="w-3 h-3" />
+                        <span className="truncate">{estate.location}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[9px] text-gray-400">From</p>
+                          <p className="font-bold text-blue-900 text-sm">{formatPrice(estate.min_price)}</p>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-blue-900 font-bold text-sm">{formatCurrency(estate.min_price)}</p>
-                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-blue-900 group-hover:text-white transition-all">
-                            <ChevronRight className="w-4 h-4" />
-                          </div>
-                        </div>
+                        <button className="px-2.5 py-1.5 bg-blue-900 text-white rounded-lg text-[10px] sm:text-xs font-semibold flex items-center gap-1">
+                          View <ChevronRight className="w-3 h-3" />
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-
-                {/* Pagination */}
-                {showAll && totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-gray-100">
-                    <button
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Previous
-                    </button>
-                    <span className="text-sm text-gray-600">
-                      Page {currentPage} of {totalPages}
-                    </span>
-                    <button
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                      className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next
-                    </button>
                   </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* CTA Banner */}
-          <div className="mt-6 bg-gradient-to-r from-blue-900 to-blue-800 rounded-2xl p-6 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl"></div>
-            <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Shield className="w-6 h-6" />
                 </div>
-                <div>
-                  <p className="font-bold text-lg">100% Government Verified</p>
-                  <p className="text-blue-200 text-sm">All properties verified by Enugu State Government</p>
-                </div>
-              </div>
-              <button
-                onClick={() => navigate('/upload-documents')}
-                className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-blue-900 rounded-xl font-semibold transition-all whitespace-nowrap"
-              >
-                Upload Your Documents
-              </button>
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-1.5 sm:py-2 z-30">
+        <div className="flex items-center justify-around max-w-md mx-auto">
+          {[
+            { icon: Home, label: 'Home', path: '/dashboard', active: true },
+            { icon: Search, label: 'Search', path: '/search', active: false },
+            { icon: Building2, label: 'Portfolio', path: '/portfolio', active: false },
+            { icon: FileText, label: 'Services', path: '/services/document-verification', active: false },
+            { icon: User, label: 'Profile', path: '/settings', active: false },
+          ].map((item) => (
+            <button key={item.path} onClick={() => navigate(item.path)} className={`flex flex-col items-center py-1 px-2 rounded-lg ${item.active ? 'text-blue-600' : 'text-gray-400'}`}>
+              <item.icon className="w-5 h-5 mb-0.5" />
+              <span className="text-[9px] sm:text-[10px] font-medium">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }
