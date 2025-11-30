@@ -1,188 +1,354 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  ArrowLeft, MapPin, Shield, CheckCircle, FileText, Scale,
-  Home, AlertCircle, ChevronDown, ChevronUp, Stamp, Building2,
-  Lock, Receipt, FileCheck, Calculator
+import {
+  ArrowLeft,
+  MapPin,
+  Ruler,
+  CreditCard,
+  CheckCircle2,
+  ChevronRight,
+  Shield,
+  FileText,
+  Calculator,
+  Sparkles,
+  Building2,
+  AlertCircle,
+  Home,
+  Search,
+  Heart,
+  User
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-interface PlotDetails {
+interface PlotData {
+  id: number;
   plot_number: string;
-  size: number;
-  type: string;
-  estate: string;
-  location: string;
+  size: string;
   price: number;
+  status: string;
+  location: string;
 }
 
-export default function LandPaymentSummary() {
+interface EstateData {
+  id: number;
+  name: string;
+  slug: string;
+  location: string;
+  plot_size: string;
+}
+
+const LandPaymentSummary = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as { plotDetails: PlotDetails } | null;
-  const [showBreakdown, setShowBreakdown] = useState(true);
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [plot, setPlot] = useState<PlotData | null>(null);
+  const [estate, setEstate] = useState<EstateData | null>(null);
 
-  if (!state?.plotDetails) {
+  useEffect(() => {
+    // Get data from navigation state
+    const state = location.state as { plot?: PlotData; estate?: EstateData } | null;
+    
+    if (state?.plot && state?.estate) {
+      setPlot(state.plot);
+      setEstate(state.estate);
+    } else {
+      // Check localStorage for any saved selection
+      const savedPlot = localStorage.getItem('selectedPlot');
+      const savedEstate = localStorage.getItem('selectedEstate');
+      
+      if (savedPlot && savedEstate) {
+        setPlot(JSON.parse(savedPlot));
+        setEstate(JSON.parse(savedEstate));
+      }
+    }
+  }, [location.state]);
+
+  const formatPrice = (amount: number) => {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  // Calculate fees based on plot price
+  const plotPrice = plot?.price || 0;
+  const legalFee = plotPrice * 0.05; // 5%
+  const surveyFee = 75000;
+  const deedOfAssignment = 50000;
+  const developmentLevy = plotPrice * 0.01; // 1%
+  const agencyFee = plotPrice * 0.025; // 2.5%
+  const stampDuty = plotPrice * 0.015; // 1.5%
+  const registrationFee = 25000;
+
+  const totalFees = legalFee + surveyFee + deedOfAssignment + developmentLevy + agencyFee + stampDuty + registrationFee;
+  const grandTotal = plotPrice + totalFees;
+
+  const fees = [
+    { name: 'Plot Price', amount: plotPrice, highlight: true },
+    { name: 'Legal Fee (5%)', amount: legalFee },
+    { name: 'Survey Fee', amount: surveyFee },
+    { name: 'Deed of Assignment', amount: deedOfAssignment },
+    { name: 'Development Levy (1%)', amount: developmentLevy },
+    { name: 'Agency Fee (2.5%)', amount: agencyFee },
+    { name: 'Stamp Duty (1.5%)', amount: stampDuty },
+    { name: 'Registration Fee', amount: registrationFee },
+  ];
+
+  const handleProceedToPayment = () => {
+    if (!plot || !estate) {
+      toast.error('Please select a property first');
+      return;
+    }
+
+    setIsProcessing(true);
+
+    // Save to localStorage for payment page
+    localStorage.setItem('selectedPlot', JSON.stringify(plot));
+    localStorage.setItem('selectedEstate', JSON.stringify(estate));
+    localStorage.setItem('paymentAmount', grandTotal.toString());
+
+    setTimeout(() => {
+      setIsProcessing(false);
+      navigate('/payment', {
+        state: {
+          plot,
+          estate,
+          totalAmount: grandTotal,
+          fees: fees,
+        }
+      });
+    }, 500);
+  };
+
+  const isActive = (path: string) => location.pathname === path;
+
+  // Show error state if no property selected
+  if (!plot || !estate) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <Home className="w-12 h-12 text-gray-300 mb-3" />
-        <h2 className="text-lg font-bold text-gray-900 mb-1">No Property Selected</h2>
-        <p className="text-gray-600 text-sm mb-4">Please select a property first.</p>
-        <button onClick={() => navigate('/dashboard')} className="px-5 py-2.5 bg-blue-900 text-white rounded-lg font-semibold text-sm">Dashboard</button>
+      <div className="min-h-screen bg-[#faf8f5] pb-24">
+        {/* Header */}
+        <header className="bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] pt-4 pb-20 px-4 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-[#c9a961]/10 rounded-full blur-3xl" />
+          <div className="relative">
+            <div className="flex items-center gap-3">
+              <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+                <ArrowLeft className="w-5 h-5 text-white" />
+              </button>
+              <div>
+                <h1 className="font-serif text-white text-xl font-bold">Payment Summary</h1>
+                <p className="text-white/70 text-xs">Review your purchase</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Error Content */}
+        <div className="px-4 -mt-8 relative z-10">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-8 border border-[#c9a961]/20 shadow-xl text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-amber-100 rounded-2xl flex items-center justify-center">
+              <AlertCircle className="w-8 h-8 text-amber-600" />
+            </div>
+            <h2 className="font-serif text-[#0a2540] text-xl font-bold mb-2">No Property Selected</h2>
+            <p className="text-[#8b6947] text-sm mb-6">
+              Please select a property first to view the payment summary.
+            </p>
+            <button
+              onClick={() => navigate('/search')}
+              className="px-6 py-3 bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] rounded-xl text-white font-semibold shadow-lg"
+            >
+              Browse Properties
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom Navigation */}
+        <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-[#c9a961]/20 px-4 py-2 z-30">
+          <div className="flex items-center justify-around max-w-md mx-auto">
+            {[
+              { icon: Home, label: 'Home', path: '/dashboard' },
+              { icon: Search, label: 'Search', path: '/search' },
+              { icon: Building2, label: 'Services', path: '/services/document-verification' },
+              { icon: Heart, label: 'Portfolio', path: '/portfolio' },
+              { icon: User, label: 'Profile', path: '/settings' },
+            ].map((item) => (
+              <button key={item.path} onClick={() => navigate(item.path)} className="flex flex-col items-center py-1">
+                <div className={`p-2 rounded-xl ${isActive(item.path) ? 'bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d]' : ''}`}>
+                  <item.icon className={`w-5 h-5 ${isActive(item.path) ? 'text-white' : 'text-[#8b6947]'}`} />
+                </div>
+                <span className={`text-[10px] font-medium ${isActive(item.path) ? 'text-[#0f3d5c]' : 'text-[#8b6947]'}`}>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
       </div>
     );
   }
 
-  const plot = state.plotDetails;
-  const propertyPrice = plot.price;
-  const legalFee = Math.round(propertyPrice * 0.05);
-  const surveyFee = 75000;
-  const deedFee = 50000;
-  const devLevy = Math.round(propertyPrice * 0.01);
-  const agencyFee = Math.round(propertyPrice * 0.025);
-  const stampDuty = Math.round(propertyPrice * 0.015);
-  const regFee = 25000;
-  const totalFees = legalFee + surveyFee + deedFee + devLevy + agencyFee + stampDuty + regFee;
-  const grandTotal = propertyPrice + totalFees;
-
-  const formatCurrency = (n: number) => '₦' + n.toLocaleString();
-
-  const handleProceed = () => {
-    if (!agreedToTerms) { toast.error('Please agree to the terms'); return; }
-    navigate('/payment', {
-      state: {
-        type: 'Property Purchase',
-        amount: grandTotal,
-        description: `${plot.plot_number} - ${plot.estate}`,
-        reference: 'LP' + Date.now(),
-        plotDetails: { ...plot },
-        feeBreakdown: { propertyPrice, legalFee, surveyFee, deedOfAssignmentFee: deedFee, developmentLevy: devLevy, agencyFee, stampDuty, registrationFee: regFee, totalFees, grandTotal }
-      }
-    });
-  };
-
-  const fees = [
-    { label: 'Legal (5%)', amount: legalFee, icon: Scale },
-    { label: 'Survey', amount: surveyFee, icon: MapPin },
-    { label: 'Deed', amount: deedFee, icon: FileText },
-    { label: 'Dev Levy (1%)', amount: devLevy, icon: Building2 },
-    { label: 'Agency (2.5%)', amount: agencyFee, icon: Receipt },
-    { label: 'Stamp Duty', amount: stampDuty, icon: Stamp },
-    { label: 'Registration', amount: regFee, icon: FileCheck },
-  ];
-
   return (
-    <div className="min-h-screen bg-gray-50 pb-28">
+    <div className="min-h-screen bg-[#faf8f5] pb-24">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-30 border-b">
-        <div className="px-3 py-3 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-gray-100 rounded-lg"><ArrowLeft className="w-5 h-5" /></button>
-          <div className="flex-1"><h1 className="font-bold text-gray-900 text-sm">Payment Summary</h1><p className="text-[10px] text-gray-500">Review before payment</p></div>
-          <div className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full"><Shield className="w-3 h-3" /><span className="text-[10px] font-medium">Secure</span></div>
+      <header className="bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] pt-4 pb-20 px-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-[#c9a961]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-6">
+            <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <div>
+              <h1 className="font-serif text-white text-xl font-bold">Payment Summary</h1>
+              <p className="text-white/70 text-xs">Review fees and proceed to payment</p>
+            </div>
+          </div>
+
+          {/* Selected Plot Card */}
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/20">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#c9a961] to-[#8b6947] rounded-xl flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-white font-bold">{plot.plot_number}</p>
+                <p className="text-white/70 text-sm">{estate.name}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2 text-white/70">
+                <Ruler className="w-4 h-4" />
+                <span>{plot.size}</span>
+              </div>
+              <div className="flex items-center gap-2 text-white/70">
+                <MapPin className="w-4 h-4" />
+                <span>{plot.location}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="px-3 py-4">
-        {/* Property Card */}
-        <div className="bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl p-4 mb-4 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-full blur-3xl"></div>
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center"><Home className="w-5 h-5 text-amber-400" /></div>
-              <div><p className="text-blue-200 text-[10px]">Property</p><p className="font-bold text-base">{plot.plot_number}</p></div>
-            </div>
-            <div className="bg-white/10 rounded-lg p-3 space-y-2 text-xs">
-              <div className="flex justify-between"><span className="text-blue-200">Estate</span><span className="font-medium">{plot.estate}</span></div>
-              <div className="flex justify-between"><span className="text-blue-200">Location</span><span className="font-medium">{plot.location}</span></div>
-              <div className="flex justify-between"><span className="text-blue-200">Type</span><span className="font-medium">{plot.type}</span></div>
-              <div className="flex justify-between"><span className="text-blue-200">Size</span><span className="font-medium">{plot.size} sqm</span></div>
-              <div className="border-t border-white/20 pt-2 mt-2">
-                <div className="flex justify-between items-center"><span className="text-blue-200">Price</span><span className="font-bold text-lg text-amber-400">{formatCurrency(propertyPrice)}</span></div>
+      {/* Main Content */}
+      <div className="px-4 -mt-8 relative z-10 space-y-6">
+        {/* Fee Breakdown */}
+        <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-5 border border-[#c9a961]/20 shadow-xl">
+          <h3 className="font-serif text-[#0a2540] font-bold mb-4 flex items-center gap-2">
+            <Calculator className="w-4 h-4 text-[#c9a961]" />
+            Fee Breakdown
+          </h3>
+          <div className="space-y-3">
+            {fees.map((fee, index) => (
+              <div
+                key={index}
+                className={`flex items-center justify-between py-3 ${
+                  fee.highlight
+                    ? 'bg-gradient-to-r from-[#0f3d5c]/5 to-[#0d6e5d]/5 rounded-xl px-3 -mx-3'
+                    : 'border-b border-[#c9a961]/10 last:border-0'
+                }`}
+              >
+                <span className={`text-sm ${fee.highlight ? 'font-semibold text-[#0a2540]' : 'text-[#8b6947]'}`}>
+                  {fee.name}
+                </span>
+                <span className={`text-sm font-medium ${fee.highlight ? 'text-[#0d6e5d] font-bold' : 'text-[#0a2540]'}`}>
+                  {formatPrice(fee.amount)}
+                </span>
               </div>
+            ))}
+          </div>
+
+          {/* Total */}
+          <div className="mt-4 pt-4 border-t-2 border-[#c9a961]/20">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-[#0a2540]">Total Amount</span>
+              <span className="text-2xl font-bold bg-gradient-to-r from-[#c9a961] to-[#8b6947] bg-clip-text text-transparent">
+                {formatPrice(grandTotal)}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Legal Fees */}
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden mb-4">
-          <button onClick={() => setShowBreakdown(!showBreakdown)} className="w-full p-3 flex items-center justify-between hover:bg-gray-50">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center"><Calculator className="w-5 h-5 text-amber-600" /></div>
-              <div className="text-left"><h3 className="font-bold text-gray-900 text-sm">Legal & Admin Fees</h3><p className="text-[10px] text-gray-500">7 items • {formatCurrency(totalFees)}</p></div>
-            </div>
-            {showBreakdown ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-          </button>
-          {showBreakdown && (
-            <div className="border-t p-3 space-y-2">
-              {fees.map((f, i) => (
-                <div key={i} className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 bg-gray-100 rounded flex items-center justify-center"><f.icon className="w-3.5 h-3.5 text-gray-500" /></div>
-                    <span className="text-xs text-gray-700">{f.label}</span>
-                  </div>
-                  <span className="font-semibold text-xs">{formatCurrency(f.amount)}</span>
-                </div>
-              ))}
-              <div className="bg-amber-50 rounded-lg p-3 mt-2">
-                <div className="flex justify-between items-center"><span className="font-semibold text-amber-800 text-xs">Total Fees</span><span className="font-bold text-amber-800">{formatCurrency(totalFees)}</span></div>
+        {/* What's Included */}
+        <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-5 border border-[#c9a961]/20 shadow-xl">
+          <h3 className="font-serif text-[#0a2540] font-bold mb-4 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[#c9a961]" />
+            What's Included
+          </h3>
+          <div className="space-y-3">
+            {[
+              'Official Deed of Assignment',
+              'Survey Plan with Beacon Numbers',
+              'Registered Land Title',
+              'Development Permit',
+              'Government Approved Documentation',
+            ].map((item, index) => (
+              <div key={index} className="flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-[#0d6e5d]" />
+                <span className="text-sm text-[#8b6947]">{item}</span>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Summary */}
-        <div className="bg-white rounded-xl shadow-sm border p-3 mb-4">
-          <h3 className="font-bold text-gray-900 text-sm mb-3 flex items-center gap-1.5"><Receipt className="w-4 h-4 text-blue-600" /> Summary</h3>
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between"><span className="text-gray-600">Property Price</span><span className="font-semibold">{formatCurrency(propertyPrice)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-600">Legal & Admin</span><span className="font-semibold">{formatCurrency(totalFees)}</span></div>
-            <div className="border-t-2 border-dashed pt-3 mt-3">
-              <div className="flex justify-between items-center"><span className="font-bold text-gray-900">Grand Total</span><span className="font-bold text-blue-900 text-xl">{formatCurrency(grandTotal)}</span></div>
-            </div>
-          </div>
-        </div>
-
-        {/* What You Get */}
-        <div className="bg-emerald-50 rounded-xl p-3 mb-4 border border-emerald-200">
-          <h3 className="font-bold text-emerald-900 text-xs mb-2 flex items-center gap-1"><CheckCircle className="w-4 h-4 text-emerald-600" /> What You Get</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {['C of O', 'Deed', 'Survey Plan', 'Title', 'Receipt', 'Clearance'].map((item, i) => (
-              <div key={i} className="flex items-center gap-1.5 bg-white rounded p-2"><CheckCircle className="w-3 h-3 text-emerald-500" /><span className="text-[10px] text-gray-700">{item}</span></div>
             ))}
           </div>
         </div>
 
-        {/* Notice */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold text-amber-800 text-[10px]">Important</p>
-              <p className="text-[10px] text-amber-700 mt-0.5">Non-refundable once allocated. Title in 90 days.</p>
-            </div>
+        {/* Security Notice */}
+        <div className="bg-gradient-to-r from-[#c9a961]/10 to-[#8b6947]/5 rounded-2xl p-4 border border-[#c9a961]/20 flex gap-3">
+          <Shield className="w-5 h-5 text-[#c9a961] flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-[#0a2540]">Secure Transaction</p>
+            <p className="text-xs text-[#8b6947]">
+              Your payment is protected by bank-level encryption. All transactions are verified and documented.
+            </p>
           </div>
         </div>
 
-        {/* Terms */}
-        <div className="bg-white rounded-xl shadow-sm border p-3 mb-4">
-          <label className="flex items-start gap-2 cursor-pointer">
-            <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600" />
-            <p className="text-[10px] text-gray-700">I agree to the <span className="text-blue-600 font-medium">Terms</span> and <span className="text-blue-600 font-medium">Purchase Agreement</span>.</p>
-          </label>
-        </div>
-      </main>
-
-      {/* Fixed Bottom */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-3 shadow-lg">
-        <div className="flex items-center justify-between mb-2">
-          <div><p className="text-[10px] text-gray-500">Total</p><p className="font-bold text-blue-900 text-lg">{formatCurrency(grandTotal)}</p></div>
-          <div className="text-right"><p className="text-emerald-600 text-[10px] font-medium flex items-center gap-0.5 justify-end"><Shield className="w-3 h-3" /> Secure</p></div>
-        </div>
-        <button onClick={handleProceed} disabled={!agreedToTerms} className={`w-full py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-1.5 ${agreedToTerms ? 'bg-gradient-to-r from-blue-900 to-blue-800 text-white' : 'bg-gray-300 text-gray-500'}`}>
-          <Lock className="w-4 h-4" /> Proceed to Payment
+        {/* Proceed Button */}
+        <button
+          onClick={handleProceedToPayment}
+          disabled={isProcessing}
+          className="w-full py-4 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-2xl text-white font-semibold shadow-xl shadow-[#c9a961]/30 flex items-center justify-center gap-2 disabled:opacity-70 hover:shadow-2xl transition-all"
+        >
+          {isProcessing ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <CreditCard className="w-5 h-5" />
+              Proceed to Payment
+              <ChevronRight className="w-5 h-5" />
+            </>
+          )}
         </button>
+
+        {/* Terms */}
+        <p className="text-xs text-center text-[#8b6947]">
+          By proceeding, you agree to our{' '}
+          <a href="#" className="text-[#0d6e5d] underline">Terms of Service</a>
+          {' '}and{' '}
+          <a href="#" className="text-[#0d6e5d] underline">Privacy Policy</a>
+        </p>
       </div>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-[#c9a961]/20 px-4 py-2 z-30">
+        <div className="flex items-center justify-around max-w-md mx-auto">
+          {[
+            { icon: Home, label: 'Home', path: '/dashboard' },
+            { icon: Search, label: 'Search', path: '/search' },
+            { icon: Building2, label: 'Services', path: '/services/document-verification' },
+            { icon: Heart, label: 'Portfolio', path: '/portfolio' },
+            { icon: User, label: 'Profile', path: '/settings' },
+          ].map((item) => (
+            <button key={item.path} onClick={() => navigate(item.path)} className="flex flex-col items-center py-1">
+              <div className={`p-2 rounded-xl ${isActive(item.path) ? 'bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d]' : ''}`}>
+                <item.icon className={`w-5 h-5 ${isActive(item.path) ? 'text-white' : 'text-[#8b6947]'}`} />
+              </div>
+              <span className={`text-[10px] font-medium ${isActive(item.path) ? 'text-[#0f3d5c]' : 'text-[#8b6947]'}`}>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
-}
+};
+
+export default LandPaymentSummary;

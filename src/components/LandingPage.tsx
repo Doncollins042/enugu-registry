@@ -10,10 +10,13 @@ import {
   Sparkles,
   Phone,
   Mail,
-  Globe,
   Star,
   ArrowRight,
-  Play
+  Lock,
+  Award,
+  TrendingUp,
+  Clock,
+  Landmark
 } from 'lucide-react';
 
 const LandingPage = () => {
@@ -23,7 +26,7 @@ const LandingPage = () => {
     {
       icon: Shield,
       title: 'Secure & Verified',
-      description: 'All land records are digitally verified and secured with blockchain technology.',
+      description: 'All land records are digitally verified and secured with advanced encryption.',
     },
     {
       icon: MapPin,
@@ -33,20 +36,29 @@ const LandingPage = () => {
     {
       icon: FileCheck,
       title: 'Digital Documentation',
-      description: 'Process all land documents online - from C of O to Governor\'s Consent.',
+      description: "Process all land documents online - from C of O to Governor's Consent.",
     },
     {
-      icon: Users,
-      title: 'Transparent Process',
-      description: 'Track your applications in real-time with full visibility into each step.',
+      icon: Clock,
+      title: 'Fast Processing',
+      description: 'Track your applications in real-time with quick turnaround times.',
     },
   ];
 
+  const stats = [
+    { label: 'Registered Properties', value: '15,000+', icon: Building2 },
+    { label: 'Verified Documents', value: '25,000+', icon: FileCheck },
+    { label: 'Active Users', value: '10,000+', icon: Users },
+    { label: 'Years of Service', value: '5+', icon: Award },
+  ];
+
   const services = [
-    { name: 'Land Registration', count: '15,000+' },
-    { name: 'Survey Plans Issued', count: '8,500+' },
-    { name: 'C of O Processed', count: '5,200+' },
-    { name: 'Active Users', count: '25,000+' },
+    { name: 'Land Registration', desc: 'Register your property officially' },
+    { name: 'Document Verification', desc: 'Verify land document authenticity' },
+    { name: "Governor's Consent", desc: 'Apply for transfer approval' },
+    { name: 'Survey Plans', desc: 'Request official surveys' },
+    { name: 'Ground Rent', desc: 'Pay annual ground rent' },
+    { name: 'C of O Processing', desc: 'Certificate of Occupancy' },
   ];
 
   const testimonials = [
@@ -73,35 +85,44 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-[#faf8f5]">
       {/* Hero Section */}
-      <header className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0f3d5c] via-[#0d6e5d] to-[#0f3d5c]" />
+      <header className="relative min-h-screen overflow-hidden">
+        {/* Background */}
         <div className="absolute inset-0">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-[#c9a961]/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#c9a961]/5 rounded-full blur-3xl" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0f3d5c] via-[#0a4d5c] to-[#0d6e5d]" />
+          <div className="absolute inset-0 opacity-30">
+            <div className="absolute top-20 left-10 w-72 h-72 bg-[#c9a961]/30 rounded-full blur-3xl" />
+            <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#c9a961]/20 rounded-full blur-3xl" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl" />
+          </div>
+          {/* Decorative Pattern */}
+          <div className="absolute inset-0 opacity-5">
+            <div className="absolute top-0 left-0 w-full h-full" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9a961' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            }} />
+          </div>
         </div>
 
         {/* Navigation */}
-        <nav className="relative z-10 flex items-center justify-between px-4 py-4 md:px-8">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-white/15 backdrop-blur rounded-xl flex items-center justify-center border border-white/20">
-              <Building2 className="w-6 h-6 text-[#c9a961]" />
+        <nav className="relative z-20 flex items-center justify-between px-6 py-5 md:px-12">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#c9a961] to-[#8b6947] rounded-2xl flex items-center justify-center shadow-lg shadow-[#c9a961]/30">
+              <Landmark className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-serif text-white font-bold text-lg leading-tight">Enugu</h1>
-              <p className="text-white/70 text-[10px] -mt-0.5">Land Registry</p>
+              <h1 className="font-serif text-white font-bold text-xl leading-tight">Enugu State</h1>
+              <p className="text-[#c9a961] text-xs font-medium">Digital Land Registry</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/login')}
-              className="px-4 py-2 text-white/90 text-sm font-medium hover:text-white transition-colors"
+              className="px-5 py-2.5 text-white/90 text-sm font-medium hover:text-white transition-colors hidden sm:block"
             >
               Sign In
             </button>
             <button
               onClick={() => navigate('/register')}
-              className="px-4 py-2 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-xl text-white text-sm font-medium shadow-lg shadow-[#c9a961]/30"
+              className="px-6 py-2.5 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-xl text-white text-sm font-semibold shadow-lg shadow-[#c9a961]/30 hover:shadow-xl transition-all"
             >
               Get Started
             </button>
@@ -109,63 +130,93 @@ const LandingPage = () => {
         </nav>
 
         {/* Hero Content */}
-        <div className="relative z-10 px-4 py-16 md:py-24 text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur rounded-full mb-6 border border-white/20">
-            <Sparkles className="w-4 h-4 text-[#c9a961]" />
-            <span className="text-white/90 text-sm">Official Government Platform</span>
+        <div className="relative z-10 px-6 py-20 md:py-32 text-center max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 backdrop-blur-xl rounded-full mb-8 border border-[#c9a961]/30">
+            <div className="w-2 h-2 bg-[#c9a961] rounded-full animate-pulse" />
+            <span className="text-white/90 text-sm font-medium">Official Government Platform</span>
+            <CheckCircle2 className="w-4 h-4 text-[#c9a961]" />
           </div>
 
-          <h1 className="font-serif text-white text-4xl md:text-5xl font-bold mb-4 leading-tight">
-            Digital Land Registry
+          <h1 className="font-serif text-white text-4xl md:text-6xl font-bold mb-6 leading-tight">
+            Secure Your Land
             <br />
-            <span className="bg-gradient-to-r from-[#c9a961] to-[#d4b976] bg-clip-text text-transparent">
-              Enugu State
+            <span className="bg-gradient-to-r from-[#c9a961] via-[#d4b976] to-[#c9a961] bg-clip-text text-transparent">
+              Investment Today
             </span>
           </h1>
 
-          <p className="text-white/80 text-lg mb-8 max-w-xl mx-auto">
-            Secure, transparent, and efficient land registration and management platform for Enugu State residents.
+          <p className="text-white/70 text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed">
+            The official digital platform for land registration, verification, and management in Enugu State. 
+            Secure, transparent, and efficient.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <button
               onClick={() => navigate('/register')}
-              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-2xl text-white font-semibold shadow-xl shadow-[#c9a961]/30 flex items-center justify-center gap-2 hover:shadow-2xl transition-all"
+              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-2xl text-white font-semibold shadow-xl shadow-[#c9a961]/40 flex items-center justify-center gap-3 hover:shadow-2xl hover:scale-105 transition-all"
             >
-              Create Account
+              Create Free Account
               <ArrowRight className="w-5 h-5" />
             </button>
-            <button className="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur rounded-2xl text-white font-semibold border border-white/20 flex items-center justify-center gap-2 hover:bg-white/20 transition-all">
-              <Play className="w-5 h-5" />
-              Watch Demo
+            <button
+              onClick={() => navigate('/login')}
+              className="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur-xl rounded-2xl text-white font-semibold border border-white/20 flex items-center justify-center gap-3 hover:bg-white/20 transition-all"
+            >
+              <Lock className="w-5 h-5" />
+              Sign In
             </button>
+          </div>
+
+          {/* Trust Badges */}
+          <div className="flex items-center justify-center gap-6 flex-wrap">
+            <div className="flex items-center gap-2 text-white/60 text-sm">
+              <Shield className="w-4 h-4 text-[#c9a961]" />
+              <span>256-bit Encryption</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/60 text-sm">
+              <CheckCircle2 className="w-4 h-4 text-[#c9a961]" />
+              <span>Government Verified</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/60 text-sm">
+              <Lock className="w-4 h-4 text-[#c9a961]" />
+              <span>Secure Platform</span>
+            </div>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="relative z-10 px-4 pb-8">
-          <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
-            {services.map((service, index) => (
-              <div
-                key={index}
-                className="bg-white/10 backdrop-blur rounded-2xl p-4 text-center border border-white/10"
-              >
-                <p className="text-2xl md:text-3xl font-bold text-white mb-1">{service.count}</p>
-                <p className="text-white/70 text-xs">{service.name}</p>
-              </div>
-            ))}
+        {/* Stats Bar */}
+        <div className="relative z-10 px-6 pb-12">
+          <div className="max-w-5xl mx-auto">
+            <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 md:p-8 border border-white/20 grid grid-cols-2 md:grid-cols-4 gap-6">
+              {stats.map((stat, index) => {
+                const Icon = stat.icon;
+                return (
+                  <div key={index} className="text-center">
+                    <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-[#c9a961]/20 to-[#8b6947]/10 rounded-xl flex items-center justify-center">
+                      <Icon className="w-6 h-6 text-[#c9a961]" />
+                    </div>
+                    <p className="text-2xl md:text-3xl font-bold text-white mb-1">{stat.value}</p>
+                    <p className="text-white/60 text-xs md:text-sm">{stat.label}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </header>
 
       {/* Features Section */}
-      <section className="px-4 py-16 md:py-24">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="font-serif text-[#0a2540] text-3xl font-bold mb-3">
-              Why Choose Our Platform?
+      <section className="px-6 py-20 md:py-28">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#c9a961]/10 rounded-full mb-4">
+              <Sparkles className="w-4 h-4 text-[#c9a961]" />
+              <span className="text-[#8b6947] text-sm font-medium">Why Choose Us</span>
+            </div>
+            <h2 className="font-serif text-[#0a2540] text-3xl md:text-4xl font-bold mb-4">
+              Modern Land Registry System
             </h2>
-            <p className="text-[#8b6947] max-w-xl mx-auto">
+            <p className="text-[#8b6947] max-w-2xl mx-auto text-lg">
               Experience the future of land registration with our comprehensive digital solution.
             </p>
           </div>
@@ -176,15 +227,15 @@ const LandingPage = () => {
               return (
                 <div
                   key={index}
-                  className="bg-white/95 backdrop-blur-xl rounded-2xl p-6 border border-[#c9a961]/20 shadow-xl hover:shadow-2xl transition-all group"
+                  className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 border border-[#c9a961]/20 shadow-xl hover:shadow-2xl transition-all group"
                 >
-                  <div className="w-14 h-14 bg-gradient-to-br from-[#0f3d5c]/10 to-[#0d6e5d]/10 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <Icon className="w-7 h-7 text-[#0d6e5d]" />
+                  <div className="w-16 h-16 bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+                    <Icon className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="font-serif text-[#0a2540] font-bold text-lg mb-2">
+                  <h3 className="font-serif text-[#0a2540] font-bold text-xl mb-3">
                     {feature.title}
                   </h3>
-                  <p className="text-[#8b6947] text-sm leading-relaxed">
+                  <p className="text-[#8b6947] leading-relaxed">
                     {feature.description}
                   </p>
                 </div>
@@ -195,39 +246,36 @@ const LandingPage = () => {
       </section>
 
       {/* Services Section */}
-      <section className="px-4 py-16 bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-[#c9a961]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-60 h-60 bg-white/5 rounded-full blur-2xl" />
+      <section className="px-6 py-20 bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#c9a961]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
 
-        <div className="relative max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="font-serif text-white text-3xl font-bold mb-3">
-              Our Services
+        <div className="relative max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full mb-4">
+              <Building2 className="w-4 h-4 text-[#c9a961]" />
+              <span className="text-white/80 text-sm font-medium">Our Services</span>
+            </div>
+            <h2 className="font-serif text-white text-3xl md:text-4xl font-bold mb-4">
+              Comprehensive Land Services
             </h2>
-            <p className="text-white/70 max-w-xl mx-auto">
-              Comprehensive land services all in one place.
+            <p className="text-white/60 max-w-2xl mx-auto">
+              Everything you need for land registration and management in one place.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-4">
-            {[
-              { name: 'Document Verification', desc: 'Verify authenticity of land documents' },
-              { name: 'Governor\'s Consent', desc: 'Apply for land transfer approval' },
-              { name: 'Survey Plans', desc: 'Request official survey plans' },
-              { name: 'Ground Rent', desc: 'Pay annual ground rent online' },
-              { name: 'C of O Application', desc: 'Certificate of Occupancy processing' },
-              { name: 'Property Search', desc: 'Search for available land plots' },
-            ].map((service, index) => (
+            {services.map((service, index) => (
               <button
                 key={index}
                 onClick={() => navigate('/login')}
-                className="bg-white/10 backdrop-blur rounded-2xl p-5 text-left border border-white/10 hover:bg-white/20 transition-all group"
+                className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 text-left border border-white/10 hover:bg-white/20 hover:border-[#c9a961]/30 transition-all group"
               >
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-3">
                   <h3 className="text-white font-semibold">{service.name}</h3>
                   <ChevronRight className="w-5 h-5 text-[#c9a961] group-hover:translate-x-1 transition-transform" />
                 </div>
-                <p className="text-white/60 text-sm">{service.desc}</p>
+                <p className="text-white/50 text-sm">{service.desc}</p>
               </button>
             ))}
           </div>
@@ -235,14 +283,18 @@ const LandingPage = () => {
       </section>
 
       {/* Testimonials */}
-      <section className="px-4 py-16 md:py-24">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="font-serif text-[#0a2540] text-3xl font-bold mb-3">
-              What People Say
+      <section className="px-6 py-20 md:py-28">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#c9a961]/10 rounded-full mb-4">
+              <Star className="w-4 h-4 text-[#c9a961]" />
+              <span className="text-[#8b6947] text-sm font-medium">Testimonials</span>
+            </div>
+            <h2 className="font-serif text-[#0a2540] text-3xl md:text-4xl font-bold mb-4">
+              Trusted by Thousands
             </h2>
             <p className="text-[#8b6947]">
-              Trusted by thousands of Enugu State residents.
+              See what our users have to say about our platform.
             </p>
           </div>
 
@@ -250,17 +302,22 @@ const LandingPage = () => {
             {testimonials.map((testimonial, index) => (
               <div
                 key={index}
-                className="bg-white/95 backdrop-blur-xl rounded-2xl p-6 border border-[#c9a961]/20 shadow-xl"
+                className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 border border-[#c9a961]/20 shadow-xl"
               >
-                <div className="flex gap-1 mb-4">
+                <div className="flex gap-1 mb-6">
                   {Array.from({ length: testimonial.rating }).map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-[#c9a961] fill-current" />
+                    <Star key={i} className="w-5 h-5 text-[#c9a961] fill-current" />
                   ))}
                 </div>
-                <p className="text-[#8b6947] text-sm mb-4 italic">"{testimonial.text}"</p>
-                <div>
-                  <p className="font-semibold text-[#0a2540]">{testimonial.name}</p>
-                  <p className="text-xs text-[#8b6947]">{testimonial.role}</p>
+                <p className="text-[#8b6947] mb-6 italic leading-relaxed">"{testimonial.text}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] rounded-xl flex items-center justify-center">
+                    <span className="text-white font-bold">{testimonial.name.charAt(0)}</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-[#0a2540]">{testimonial.name}</p>
+                    <p className="text-xs text-[#8b6947]">{testimonial.role}</p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -269,77 +326,91 @@ const LandingPage = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="px-4 py-16">
-        <div className="max-w-2xl mx-auto bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-[#c9a961]/20 rounded-full blur-2xl" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-xl" />
+      <section className="px-6 py-16">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] rounded-3xl p-10 md:p-14 text-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-[#c9a961]/20 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
 
-          <div className="relative">
-            <h2 className="font-serif text-white text-2xl md:text-3xl font-bold mb-3">
-              Ready to Get Started?
-            </h2>
-            <p className="text-white/70 mb-6">
-              Join thousands of users managing their land records digitally.
-            </p>
-            <button
-              onClick={() => navigate('/register')}
-              className="px-8 py-4 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-2xl text-white font-semibold shadow-xl shadow-[#c9a961]/30 inline-flex items-center gap-2"
-            >
-              Create Free Account
-              <ArrowRight className="w-5 h-5" />
-            </button>
+            <div className="relative">
+              <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#c9a961] to-[#8b6947] rounded-2xl flex items-center justify-center shadow-xl">
+                <TrendingUp className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="font-serif text-white text-2xl md:text-3xl font-bold mb-4">
+                Ready to Secure Your Property?
+              </h2>
+              <p className="text-white/70 mb-8 max-w-lg mx-auto">
+                Join thousands of Enugu State residents managing their land records digitally.
+              </p>
+              <button
+                onClick={() => navigate('/register')}
+                className="px-10 py-4 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-2xl text-white font-semibold shadow-xl shadow-[#c9a961]/40 inline-flex items-center gap-3 hover:shadow-2xl hover:scale-105 transition-all"
+              >
+                Get Started Free
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#0a2540] px-4 py-12">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
+      <footer className="bg-[#0a2540] px-6 py-16">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-10 mb-12">
             <div className="md:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-[#c9a961]" />
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#c9a961] to-[#8b6947] rounded-2xl flex items-center justify-center">
+                  <Landmark className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-serif text-white font-bold">Enugu Land Registry</h3>
+                  <h3 className="font-serif text-white font-bold text-lg">Enugu State</h3>
+                  <p className="text-[#c9a961] text-xs">Digital Land Registry</p>
                 </div>
               </div>
-              <p className="text-white/60 text-sm mb-4">
-                Official digital land registration platform for Enugu State Government.
+              <p className="text-white/50 text-sm mb-6 max-w-sm leading-relaxed">
+                Official digital land registration platform for Enugu State Government. Secure, transparent, and efficient.
               </p>
-              <div className="flex gap-4">
-                <a href="tel:+2348012345678" className="flex items-center gap-2 text-white/60 text-sm hover:text-white">
-                  <Phone className="w-4 h-4" />
+              <div className="space-y-3">
+                <a href="tel:+2348012345678" className="flex items-center gap-3 text-white/60 text-sm hover:text-white transition-colors">
+                  <Phone className="w-4 h-4 text-[#c9a961]" />
                   +234 801 234 5678
+                </a>
+                <a href="mailto:info@enugu.gov.ng" className="flex items-center gap-3 text-white/60 text-sm hover:text-white transition-colors">
+                  <Mail className="w-4 h-4 text-[#c9a961]" />
+                  info@enugu.gov.ng
                 </a>
               </div>
             </div>
 
             <div>
-              <h4 className="text-white font-semibold mb-4">Quick Links</h4>
-              <div className="space-y-2">
-                <a href="#" className="block text-white/60 text-sm hover:text-white">About Us</a>
-                <a href="#" className="block text-white/60 text-sm hover:text-white">Services</a>
-                <a href="#" className="block text-white/60 text-sm hover:text-white">FAQs</a>
-                <a href="#" className="block text-white/60 text-sm hover:text-white">Contact</a>
+              <h4 className="text-white font-semibold mb-6">Quick Links</h4>
+              <div className="space-y-3">
+                <a href="#" className="block text-white/50 text-sm hover:text-white transition-colors">About Us</a>
+                <a href="#" className="block text-white/50 text-sm hover:text-white transition-colors">Services</a>
+                <a href="#" className="block text-white/50 text-sm hover:text-white transition-colors">FAQs</a>
+                <a href="#" className="block text-white/50 text-sm hover:text-white transition-colors">Contact</a>
               </div>
             </div>
 
             <div>
-              <h4 className="text-white font-semibold mb-4">Legal</h4>
-              <div className="space-y-2">
-                <a href="#" className="block text-white/60 text-sm hover:text-white">Privacy Policy</a>
-                <a href="#" className="block text-white/60 text-sm hover:text-white">Terms of Service</a>
-                <a href="#" className="block text-white/60 text-sm hover:text-white">Cookie Policy</a>
+              <h4 className="text-white font-semibold mb-6">Legal</h4>
+              <div className="space-y-3">
+                <a href="#" className="block text-white/50 text-sm hover:text-white transition-colors">Privacy Policy</a>
+                <a href="#" className="block text-white/50 text-sm hover:text-white transition-colors">Terms of Service</a>
+                <a href="#" className="block text-white/50 text-sm hover:text-white transition-colors">Cookie Policy</a>
               </div>
             </div>
           </div>
 
-          <div className="border-t border-white/10 pt-8 text-center">
-            <p className="text-white/40 text-sm">
+          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-white/30 text-sm">
               © 2024 Enugu State Land Registry. All rights reserved.
             </p>
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-[#c9a961]" />
+              <span className="text-white/30 text-sm">Secured by Government of Enugu State</span>
+            </div>
           </div>
         </div>
       </footer>
