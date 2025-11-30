@@ -2,151 +2,164 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
-  Upload,
+  Search,
   FileText,
-  Image,
-  File,
   CheckCircle2,
   XCircle,
-  Trash2,
-  Eye,
-  CloudUpload,
-  Shield,
   Clock,
-  Sparkles,
   AlertCircle,
-  Home,
-  Search,
+  ChevronRight,
+  Shield,
+  Upload,
+  Download,
+  Eye,
+  Sparkles,
   Building2,
-  Heart,
-  User
+  MapPin,
+  Calendar,
+  User,
+  Hash,
+  Home,
+  Heart
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-interface UploadedFile {
-  id: string;
-  name: string;
-  size: string;
-  type: string;
-  status: 'uploading' | 'success' | 'error';
-  progress: number;
+interface VerificationResult {
+  documentId: string;
+  documentType: string;
+  ownerName: string;
+  propertyAddress: string;
+  issueDate: string;
+  expiryDate: string;
+  status: 'valid' | 'invalid' | 'expired' | 'pending';
+  registrationNumber: string;
 }
 
-const DocumentUpload = () => {
+const DocumentVerification = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [files, setFiles] = useState<UploadedFile[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('general');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResult, setSearchResult] = useState<VerificationResult | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  const documentCategories = [
-    { id: 'general', name: 'General Documents', icon: FileText },
-    { id: 'identity', name: 'Identity Documents', icon: Shield },
-    { id: 'property', name: 'Property Documents', icon: Building2 },
-    { id: 'legal', name: 'Legal Documents', icon: File },
-  ];
-
-  const acceptedTypes = [
-    { ext: 'PDF', mime: 'application/pdf' },
-    { ext: 'JPG', mime: 'image/jpeg' },
-    { ext: 'PNG', mime: 'image/png' },
-    { ext: 'DOC', mime: 'application/msword' },
-  ];
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  // Demo verification results
+  const demoResults: Record<string, VerificationResult> = {
+    'COO-2024-001234': {
+      documentId: 'COO-2024-001234',
+      documentType: 'Certificate of Occupancy',
+      ownerName: 'James Okonkwo',
+      propertyAddress: 'Plot 15, Block A, Legacy Estate, Independence Layout, Enugu',
+      issueDate: '2024-01-15',
+      expiryDate: '2099-01-15',
+      status: 'valid',
+      registrationNumber: 'EN/IL/LE/015/2024',
+    },
+    'DOA-2023-005678': {
+      documentId: 'DOA-2023-005678',
+      documentType: 'Deed of Assignment',
+      ownerName: 'Chioma Eze',
+      propertyAddress: 'Plot 7, Royal Gardens, Trans-Ekulu, Enugu',
+      issueDate: '2023-06-20',
+      expiryDate: '2098-06-20',
+      status: 'valid',
+      registrationNumber: 'EN/TE/RG/007/2023',
+    },
+    'GC-2022-009999': {
+      documentId: 'GC-2022-009999',
+      documentType: "Governor's Consent",
+      ownerName: 'Emmanuel Nwankwo',
+      propertyAddress: 'Plot 32, Diamond Heights, New Haven, Enugu',
+      issueDate: '2022-03-10',
+      expiryDate: '2097-03-10',
+      status: 'expired',
+      registrationNumber: 'EN/NH/DH/032/2022',
+    },
   };
 
-  const getFileIcon = (type: string) => {
-    if (type.includes('image')) return Image;
-    if (type.includes('pdf')) return FileText;
-    return File;
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    processFiles(droppedFiles);
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
-    processFiles(selectedFiles);
-  };
-
-  const processFiles = (newFiles: File[]) => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
-
-    newFiles.forEach((file) => {
-      if (file.size > maxSize) {
-        toast.error(`${file.name} is too large. Maximum size is 10MB.`);
-        return;
-      }
-
-      const uploadFile: UploadedFile = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        name: file.name,
-        size: formatFileSize(file.size),
-        type: file.type,
-        status: 'uploading',
-        progress: 0,
-      };
-
-      setFiles((prev) => [...prev, uploadFile]);
-
-      // Simulate upload progress
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += Math.random() * 30;
-        if (progress >= 100) {
-          progress = 100;
-          clearInterval(interval);
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.id === uploadFile.id
-                ? { ...f, progress: 100, status: 'success' }
-                : f
-            )
-          );
-          toast.success(`${file.name} uploaded successfully!`);
-        } else {
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.id === uploadFile.id ? { ...f, progress: Math.min(progress, 99) } : f
-            )
-          );
-        }
-      }, 500);
-    });
-  };
-
-  const removeFile = (id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
-    toast.success('File removed');
-  };
-
-  const handleSubmit = () => {
-    const successfulFiles = files.filter((f) => f.status === 'success');
-    if (successfulFiles.length === 0) {
-      toast.error('Please upload at least one document');
+  const handleSearch = () => {
+    if (!searchQuery.trim()) {
+      toast.error('Please enter a document number');
       return;
     }
-    toast.success('Documents submitted for review!');
-    navigate('/services/document-verification');
+
+    setIsSearching(true);
+    setHasSearched(true);
+
+    // Simulate API call
+    setTimeout(() => {
+      const result = demoResults[searchQuery.toUpperCase()];
+      setSearchResult(result || null);
+      setIsSearching(false);
+
+      if (result) {
+        toast.success('Document found!');
+      } else {
+        toast.error('Document not found');
+      }
+    }, 1500);
   };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'valid':
+        return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+      case 'invalid':
+        return 'bg-rose-100 text-rose-700 border-rose-200';
+      case 'expired':
+        return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'pending':
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'valid':
+        return CheckCircle2;
+      case 'invalid':
+        return XCircle;
+      case 'expired':
+        return AlertCircle;
+      case 'pending':
+        return Clock;
+      default:
+        return AlertCircle;
+    }
+  };
+
+  const services = [
+    {
+      name: 'Document Upload',
+      description: 'Upload documents for verification',
+      icon: Upload,
+      path: '/services/document-upload',
+      color: 'from-[#0f3d5c] to-[#0d6e5d]',
+    },
+    {
+      name: "Governor's Consent",
+      description: 'Apply for land transfer approval',
+      icon: FileText,
+      path: '/services/governors-consent',
+      color: 'from-[#c9a961] to-[#8b6947]',
+    },
+    {
+      name: 'Ground Rent',
+      description: 'Pay your annual ground rent',
+      icon: Building2,
+      path: '/services/ground-rent',
+      color: 'from-[#0f3d5c] to-[#0d6e5d]',
+    },
+    {
+      name: 'Survey Plan',
+      description: 'Request official survey plans',
+      icon: MapPin,
+      path: '/services/survey-plan',
+      color: 'from-[#c9a961] to-[#8b6947]',
+    },
+  ];
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -165,220 +178,248 @@ const DocumentUpload = () => {
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
             <div>
-              <h1 className="font-serif text-white text-xl font-bold">Document Upload</h1>
-              <p className="text-white/70 text-xs">Upload your land documents securely</p>
+              <h1 className="font-serif text-white text-xl font-bold">Document Verification</h1>
+              <p className="text-white/70 text-xs">Verify authenticity of land documents</p>
             </div>
           </div>
 
-          {/* Upload Stats */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur rounded-xl">
-              <CloudUpload className="w-4 h-4 text-[#c9a961]" />
-              <span className="text-white text-sm font-medium">{files.length} Files</span>
+          {/* Search Box */}
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/20">
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="Enter document number (e.g., COO-2024-001234)"
+                  className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 text-sm focus:outline-none focus:border-white/40 focus:ring-2 focus:ring-white/20"
+                />
+              </div>
+              <button
+                onClick={handleSearch}
+                disabled={isSearching}
+                className="px-6 py-3 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-xl text-white font-semibold shadow-lg disabled:opacity-70 flex items-center gap-2"
+              >
+                {isSearching ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Search className="w-5 h-5" />
+                )}
+              </button>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur rounded-xl">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span className="text-white text-sm font-medium">
-                {files.filter((f) => f.status === 'success').length} Ready
-              </span>
-            </div>
+            <p className="text-white/50 text-xs mt-2">
+              Try: COO-2024-001234, DOA-2023-005678, or GC-2022-009999
+            </p>
           </div>
         </div>
       </header>
 
       {/* Main Content - Pulled up */}
-      <div className="px-4 -mt-12 relative z-10 space-y-6">
-        {/* Category Selection */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl">
-          <h2 className="font-serif text-[#0a2540] font-bold mb-3 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#c9a961]" />
-            Document Category
-          </h2>
-          <div className="grid grid-cols-2 gap-2">
-            {documentCategories.map((cat) => {
-              const Icon = cat.icon;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`p-3 rounded-xl border transition-all flex items-center gap-2 ${
-                    selectedCategory === cat.id
-                      ? 'bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] text-white border-transparent shadow-lg'
-                      : 'bg-[#faf8f5] text-[#8b6947] border-[#c9a961]/20 hover:border-[#c9a961]'
+      <div className="px-4 -mt-8 relative z-10 space-y-6">
+        {/* Search Result */}
+        {hasSearched && (
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-[#c9a961]/20 shadow-xl overflow-hidden">
+            {isSearching ? (
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 border-4 border-[#c9a961] border-t-transparent rounded-full animate-spin" />
+                <p className="text-[#8b6947]">Verifying document...</p>
+              </div>
+            ) : searchResult ? (
+              <>
+                {/* Status Banner */}
+                <div
+                  className={`px-4 py-3 flex items-center gap-3 ${
+                    searchResult.status === 'valid'
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-600'
+                      : searchResult.status === 'expired'
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600'
+                      : 'bg-gradient-to-r from-rose-500 to-rose-600'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
-                  <span className="text-xs font-medium">{cat.name}</span>
+                  {(() => {
+                    const StatusIcon = getStatusIcon(searchResult.status);
+                    return <StatusIcon className="w-6 h-6 text-white" />;
+                  })()}
+                  <div>
+                    <p className="text-white font-bold">
+                      Document {searchResult.status.charAt(0).toUpperCase() + searchResult.status.slice(1)}
+                    </p>
+                    <p className="text-white/80 text-xs">
+                      {searchResult.status === 'valid'
+                        ? 'This document is authentic and valid'
+                        : searchResult.status === 'expired'
+                        ? 'This document has expired'
+                        : 'This document could not be verified'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Document Details */}
+                <div className="p-4 space-y-4">
+                  <div className="flex items-center gap-3 pb-4 border-b border-[#c9a961]/20">
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#0f3d5c]/10 to-[#0d6e5d]/10 rounded-xl flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-[#0d6e5d]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[#0a2540]">{searchResult.documentType}</p>
+                      <p className="text-xs text-[#8b6947]">{searchResult.documentId}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <User className="w-4 h-4 text-[#c9a961] mt-0.5" />
+                      <div>
+                        <p className="text-xs text-[#8b6947]">Owner Name</p>
+                        <p className="text-sm font-medium text-[#0a2540]">{searchResult.ownerName}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <MapPin className="w-4 h-4 text-[#c9a961] mt-0.5" />
+                      <div>
+                        <p className="text-xs text-[#8b6947]">Property Address</p>
+                        <p className="text-sm font-medium text-[#0a2540]">{searchResult.propertyAddress}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Hash className="w-4 h-4 text-[#c9a961] mt-0.5" />
+                      <div>
+                        <p className="text-xs text-[#8b6947]">Registration Number</p>
+                        <p className="text-sm font-medium text-[#0a2540]">{searchResult.registrationNumber}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-start gap-3">
+                        <Calendar className="w-4 h-4 text-[#c9a961] mt-0.5" />
+                        <div>
+                          <p className="text-xs text-[#8b6947]">Issue Date</p>
+                          <p className="text-sm font-medium text-[#0a2540]">
+                            {new Date(searchResult.issueDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Clock className="w-4 h-4 text-[#c9a961] mt-0.5" />
+                        <div>
+                          <p className="text-xs text-[#8b6947]">Expiry Date</p>
+                          <p className="text-sm font-medium text-[#0a2540]">
+                            {new Date(searchResult.expiryDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-4 border-t border-[#c9a961]/20">
+                    <button className="flex-1 py-3 bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] rounded-xl text-white font-medium text-sm flex items-center justify-center gap-2">
+                      <Download className="w-4 h-4" />
+                      Download Report
+                    </button>
+                    <button className="flex-1 py-3 bg-[#faf8f5] border border-[#c9a961]/20 rounded-xl text-[#8b6947] font-medium text-sm flex items-center justify-center gap-2">
+                      <Eye className="w-4 h-4" />
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-rose-100 rounded-2xl flex items-center justify-center">
+                  <XCircle className="w-8 h-8 text-rose-500" />
+                </div>
+                <h3 className="font-serif text-[#0a2540] font-bold mb-2">Document Not Found</h3>
+                <p className="text-sm text-[#8b6947]">
+                  No document matches the number "{searchQuery}". Please check and try again.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Quick Services */}
+        <div>
+          <h3 className="font-serif text-[#0a2540] font-bold mb-3 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[#c9a961]" />
+            Government Services
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            {services.map((service) => {
+              const Icon = service.icon;
+              return (
+                <button
+                  key={service.path}
+                  onClick={() => navigate(service.path)}
+                  className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-lg hover:shadow-xl transition-all text-left group"
+                >
+                  <div
+                    className={`w-10 h-10 bg-gradient-to-r ${service.color} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}
+                  >
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
+                  <h4 className="font-semibold text-[#0a2540] text-sm mb-1">{service.name}</h4>
+                  <p className="text-xs text-[#8b6947]">{service.description}</p>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Upload Zone */}
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`bg-white/95 backdrop-blur-xl rounded-2xl border-2 border-dashed transition-all ${
-            isDragging
-              ? 'border-[#0d6e5d] bg-[#0d6e5d]/5'
-              : 'border-[#c9a961]/40 hover:border-[#c9a961]'
-          } shadow-xl`}
-        >
-          <label className="block cursor-pointer p-8 text-center">
-            <input
-              type="file"
-              multiple
-              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <div
-              className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all ${
-                isDragging
-                  ? 'bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d]'
-                  : 'bg-gradient-to-br from-[#c9a961]/20 to-[#8b6947]/10'
-              }`}
-            >
-              <Upload
-                className={`w-8 h-8 ${isDragging ? 'text-white' : 'text-[#c9a961]'}`}
-              />
-            </div>
-            <h3 className="font-serif text-[#0a2540] font-bold mb-1">
-              {isDragging ? 'Drop files here' : 'Upload Documents'}
-            </h3>
-            <p className="text-[#8b6947] text-sm mb-3">
-              Drag & drop or <span className="text-[#0d6e5d] font-medium">browse</span>
-            </p>
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              {acceptedTypes.map((type) => (
-                <span
-                  key={type.ext}
-                  className="px-2 py-1 bg-[#faf8f5] rounded text-xs text-[#8b6947] border border-[#c9a961]/20"
-                >
-                  {type.ext}
-                </span>
-              ))}
-              <span className="text-xs text-[#8b6947]">• Max 10MB</span>
-            </div>
-          </label>
-        </div>
-
-        {/* Info Alert */}
+        {/* Info Card */}
         <div className="bg-gradient-to-r from-[#c9a961]/10 to-[#8b6947]/5 rounded-2xl p-4 border border-[#c9a961]/20 flex gap-3">
-          <AlertCircle className="w-5 h-5 text-[#c9a961] flex-shrink-0 mt-0.5" />
+          <Shield className="w-5 h-5 text-[#c9a961] flex-shrink-0" />
           <div>
-            <p className="text-sm text-[#0a2540] font-medium mb-1">
-              Secure Document Upload
-            </p>
+            <p className="text-sm font-medium text-[#0a2540]">Secure Verification</p>
             <p className="text-xs text-[#8b6947]">
-              Your documents are encrypted and securely stored. Only authorized government
-              officials can access them for verification purposes.
+              All document verifications are processed securely and logged for audit purposes.
+              Only authorized documents are recognized by this system.
             </p>
           </div>
         </div>
 
-        {/* Uploaded Files */}
-        {files.length > 0 && (
+        {/* Recent Verifications */}
+        <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl">
+          <h3 className="font-serif text-[#0a2540] font-bold mb-3">Recent Verifications</h3>
           <div className="space-y-3">
-            <h3 className="font-serif text-[#0a2540] font-bold flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#c9a961]" />
-              Uploaded Files
-            </h3>
-            {files.map((file) => {
-              const FileIcon = getFileIcon(file.type);
-              return (
-                <div
-                  key={file.id}
-                  className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        file.status === 'success'
-                          ? 'bg-gradient-to-br from-emerald-100 to-emerald-200'
-                          : file.status === 'error'
-                          ? 'bg-gradient-to-br from-rose-100 to-rose-200'
-                          : 'bg-gradient-to-br from-[#c9a961]/20 to-[#8b6947]/10'
-                      }`}
-                    >
-                      <FileIcon
-                        className={`w-6 h-6 ${
-                          file.status === 'success'
-                            ? 'text-emerald-600'
-                            : file.status === 'error'
-                            ? 'text-rose-600'
-                            : 'text-[#c9a961]'
-                        }`}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#0a2540] truncate">
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-[#8b6947]">{file.size}</p>
-                      {file.status === 'uploading' && (
-                        <div className="mt-2 h-1.5 bg-[#faf8f5] rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] rounded-full transition-all duration-300"
-                            style={{ width: `${file.progress}%` }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {file.status === 'success' && (
-                        <>
-                          <button className="p-2 hover:bg-[#faf8f5] rounded-lg transition-colors">
-                            <Eye className="w-4 h-4 text-[#8b6947]" />
-                          </button>
-                          <button
-                            onClick={() => removeFile(file.id)}
-                            className="p-2 hover:bg-rose-50 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4 text-rose-500" />
-                          </button>
-                        </>
-                      )}
-                      {file.status === 'uploading' && (
-                        <div className="w-8 h-8 border-2 border-[#c9a961] border-t-transparent rounded-full animate-spin" />
-                      )}
-                      {file.status === 'error' && (
-                        <XCircle className="w-5 h-5 text-rose-500" />
-                      )}
-                    </div>
+            {[
+              { id: 'COO-2024-001234', type: 'Certificate of Occupancy', status: 'valid', date: 'Today' },
+              { id: 'DOA-2023-005678', type: 'Deed of Assignment', status: 'valid', date: 'Yesterday' },
+              { id: 'GC-2022-009999', type: "Governor's Consent", status: 'expired', date: '2 days ago' },
+            ].map((item, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  setSearchQuery(item.id);
+                  handleSearch();
+                }}
+                className="w-full flex items-center justify-between p-3 bg-[#faf8f5] rounded-xl hover:bg-[#c9a961]/10 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-[#0f3d5c]/10 to-[#0d6e5d]/10 rounded-lg flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-[#0d6e5d]" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-[#0a2540]">{item.id}</p>
+                    <p className="text-xs text-[#8b6947]">{item.type}</p>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Processing Time */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#0f3d5c]/10 to-[#0d6e5d]/10 rounded-xl flex items-center justify-center">
-              <Clock className="w-6 h-6 text-[#0d6e5d]" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-[#0a2540]">Processing Time</p>
-              <p className="text-xs text-[#8b6947]">
-                Documents are typically verified within 2-5 business days
-              </p>
-            </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.status)}`}
+                  >
+                    {item.status}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-[#8b6947]" />
+                </div>
+              </button>
+            ))}
           </div>
         </div>
-
-        {/* Submit Button */}
-        <button
-          onClick={handleSubmit}
-          disabled={files.filter((f) => f.status === 'success').length === 0}
-          className="w-full py-4 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-2xl text-white font-semibold shadow-xl shadow-[#c9a961]/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-2xl transition-all"
-        >
-          <Shield className="w-5 h-5" />
-          Submit for Verification
-        </button>
       </div>
 
       {/* Bottom Navigation */}
@@ -424,4 +465,4 @@ const DocumentUpload = () => {
   );
 };
 
-export default DocumentUpload;
+export default DocumentVerification;
