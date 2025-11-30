@@ -1,348 +1,300 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, LogOut, Bell, Search, MapPin, DollarSign, Maximize2, ArrowLeft, X, SlidersHorizontal } from 'lucide-react';
+import { 
+  Search, ArrowLeft, MapPin, Filter, X, ChevronRight, 
+  SlidersHorizontal, Heart, Home, Building2, Crown, Check
+} from 'lucide-react';
+import { api } from '../services/api';
 import toast from 'react-hot-toast';
 
-interface AdvancedSearchProps {
-  user: any;
-  onLogout: () => void;
+interface Estate {
+  id: number; name: string; slug: string; location: string; description: string;
+  total_plots: number; available_plots: number; min_price: string; max_price: string;
+  image_url: string; status: string;
 }
 
-export default function AdvancedSearch({ user, onLogout }: AdvancedSearchProps) {
+export default function AdvancedSearch() {
   const navigate = useNavigate();
+  const [estates, setEstates] = useState<Estate[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(true);
-  const [filters, setFilters] = useState({
-    location: '',
-    minPrice: '',
-    maxPrice: '',
-    minSize: '',
-    maxSize: '',
-    status: 'all',
-  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000000]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'name' | 'available'>('available');
 
-  const estates = [
-    { name: 'Legacy Estate', location: 'Independence Layout', plots: 87, available: 45, priceRange: '5M - 12M', minPrice: 5000000, maxPrice: 12000000, minSize: 450, maxSize: 800, image: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400', slug: 'legacy-estate' },
-    { name: 'Liberty Estate', location: 'Trans Ekulu', plots: 45, available: 28, priceRange: '8M - 15M', minPrice: 8000000, maxPrice: 15000000, minSize: 500, maxSize: 1000, image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400', slug: 'liberty-estate' },
-    { name: 'Fidelity Estate', location: 'New Haven', plots: 156, available: 98, priceRange: '6M - 10M', minPrice: 6000000, maxPrice: 10000000, minSize: 400, maxSize: 650, image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400', slug: 'fidelity-estate' },
-    { name: 'Bricks Estate', location: 'Achara Layout', plots: 92, available: 67, priceRange: '4M - 9M', minPrice: 4000000, maxPrice: 9000000, minSize: 350, maxSize: 600, image: 'https://images.unsplash.com/photo-1605146769289-440113cc3d00?w=400', slug: 'bricks-estate' },
-    { name: 'Royal Gardens', location: 'GRA', plots: 64, available: 32, priceRange: '10M - 18M', minPrice: 10000000, maxPrice: 18000000, minSize: 600, maxSize: 1200, image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400', slug: 'royal-gardens' },
-    { name: 'Crown Estate', location: 'Maryland', plots: 78, available: 45, priceRange: '7M - 13M', minPrice: 7000000, maxPrice: 13000000, minSize: 450, maxSize: 750, image: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=400', slug: 'crown-estate' },
-    { name: 'Premier Heights', location: 'Independence Layout', plots: 53, available: 21, priceRange: '9M - 16M', minPrice: 9000000, maxPrice: 16000000, minSize: 500, maxSize: 900, image: 'https://images.unsplash.com/photo-1600607687644-aac4c3eac7f4?w=400', slug: 'premier-heights' },
-    { name: 'Elite Gardens', location: 'Asata', plots: 41, available: 30, priceRange: '6M - 11M', minPrice: 6000000, maxPrice: 11000000, minSize: 400, maxSize: 700, image: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=400', slug: 'elite-gardens' },
-  ];
+  const locations = ['Independence Layout', 'Trans-Ekulu', 'New Haven', 'GRA', 'Abakpa Nike', 'Achara Layout'];
+  const propertyTypes = ['Residential', 'Commercial', 'Mixed Use', 'Premium'];
 
-  const filteredEstates = useMemo(() => {
-    return estates.filter(estate => {
-      // Search query filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const matchesSearch = 
-          estate.name.toLowerCase().includes(query) ||
-          estate.location.toLowerCase().includes(query);
-        if (!matchesSearch) return false;
-      }
+  useEffect(() => { fetchEstates(); }, []);
 
-      // Location filter
-      if (filters.location) {
-        const matchLocation = estate.location.toLowerCase().includes(filters.location.toLowerCase());
-        if (!matchLocation) return false;
-      }
-
-      // Price filters
-      if (filters.minPrice) {
-        const minP = parseInt(filters.minPrice);
-        if (estate.maxPrice < minP) return false;
-      }
-      if (filters.maxPrice) {
-        const maxP = parseInt(filters.maxPrice);
-        if (estate.minPrice > maxP) return false;
-      }
-
-      // Size filters
-      if (filters.minSize) {
-        const minS = parseInt(filters.minSize);
-        if (estate.maxSize < minS) return false;
-      }
-      if (filters.maxSize) {
-        const maxS = parseInt(filters.maxSize);
-        if (estate.minSize > maxS) return false;
-      }
-
-      // Status filter
-      if (filters.status === 'available' && estate.available === 0) return false;
-      if (filters.status === 'sold' && estate.available > 0) return false;
-
-      return true;
-    });
-  }, [searchQuery, filters]);
-
-  const handleClearFilters = () => {
-    setFilters({
-      location: '',
-      minPrice: '',
-      maxPrice: '',
-      minSize: '',
-      maxSize: '',
-      status: 'all',
-    });
-    setSearchQuery('');
-    toast.success('Filters cleared');
+  const fetchEstates = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getEstates();
+      setEstates(data || []);
+    } catch (error) { toast.error('Failed to load'); }
+    finally { setLoading(false); }
   };
 
-  const hasActiveFilters = 
-    filters.location || 
-    filters.minPrice || 
-    filters.maxPrice || 
-    filters.minSize || 
-    filters.maxSize || 
-    filters.status !== 'all' ||
-    searchQuery;
+  const formatPrice = (price: string) => {
+    const num = parseInt(price);
+    if (num >= 1000000) return '₦' + (num / 1000000).toFixed(1) + 'M';
+    return '₦' + (num / 1000).toFixed(0) + 'K';
+  };
+
+  const filteredEstates = estates
+    .filter(e => {
+      const matchesSearch = e.name.toLowerCase().includes(searchQuery.toLowerCase()) || e.location.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesPrice = parseInt(e.min_price) >= priceRange[0] && parseInt(e.min_price) <= priceRange[1];
+      const matchesLocation = selectedLocations.length === 0 || selectedLocations.some(loc => e.location.includes(loc));
+      return matchesSearch && matchesPrice && matchesLocation;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'price-asc': return parseInt(a.min_price) - parseInt(b.min_price);
+        case 'price-desc': return parseInt(b.min_price) - parseInt(a.min_price);
+        case 'name': return a.name.localeCompare(b.name);
+        case 'available': return b.available_plots - a.available_plots;
+        default: return 0;
+      }
+    });
+
+  const clearFilters = () => {
+    setPriceRange([0, 50000000]);
+    setSelectedLocations([]);
+    setSelectedTypes([]);
+    setSortBy('available');
+  };
+
+  const activeFiltersCount = (selectedLocations.length > 0 ? 1 : 0) + (selectedTypes.length > 0 ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 50000000 ? 1 : 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
-      {/* Blurred Background */}
-      <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-gray-50/98 to-white/95 z-10"></div>
-        <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1920&q=80" alt="Property" className="w-full h-full object-cover opacity-20 blur-md" />
-      </div>
-
-      {/* Content */}
-      <div className="relative z-20">
-        {/* Header */}
-        <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-900 to-blue-700 rounded-lg flex items-center justify-center">
-                  <Home className="w-6 h-6 text-amber-400" />
-                </div>
-                <div>
-                  <h1 className="text-base font-bold text-gray-900">Enugu State Land Registry</h1>
-                  <p className="text-xs text-gray-600">Property Search</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                  <Bell className="w-5 h-5 text-gray-700" />
-                </button>
-                <button onClick={onLogout} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                  <LogOut className="w-5 h-5 text-gray-700" />
-                </button>
-              </div>
+    <div className="min-h-screen bg-[#faf8f5] pb-24">
+      {/* Header */}
+      <header className="bg-white/95 backdrop-blur-md border-b border-[#c9a961]/20 sticky top-0 z-40">
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-3 mb-3">
+            <button onClick={() => navigate(-1)} className="p-2 hover:bg-[#faf8f5] rounded-xl">
+              <ArrowLeft className="w-5 h-5 text-[#0a2540]" />
+            </button>
+            <div className="flex-1">
+              <h1 className="font-serif text-[#0a2540] font-bold text-sm">Find Properties</h1>
+              <p className="text-[10px] text-[#8b6947]">{filteredEstates.length} estates available</p>
             </div>
-          </div>
-        </header>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-          <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 text-sm">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
-          </button>
-
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Find Your Perfect Property</h1>
-            <p className="text-sm text-gray-600">Search and filter estates by location, price, and size</p>
           </div>
 
           {/* Search Bar */}
-          <div className="mb-6">
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by estate name or location..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`px-4 py-3 border rounded-lg transition-all flex items-center gap-2 text-sm font-medium ${
-                  showFilters ? 'bg-blue-900 text-white border-blue-900' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                }`}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b6947]" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search estates, locations..."
+                className="w-full pl-10 pr-4 py-2.5 bg-[#faf8f5] border border-[#c9a961]/20 rounded-xl text-[#0a2540] text-sm placeholder-[#8b6947]/50 focus:outline-none focus:border-[#0d6e5d]"
+              />
+            </div>
+            <button onClick={() => setShowFilters(true)} className="relative px-3 py-2.5 bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] rounded-xl">
+              <SlidersHorizontal className="w-5 h-5 text-white" />
+              {activeFiltersCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#c9a961] rounded-full text-[10px] text-white font-bold flex items-center justify-center">{activeFiltersCount}</span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Sort Options */}
+        <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
+          {[
+            { id: 'available', label: 'Most Available' },
+            { id: 'price-asc', label: 'Price: Low' },
+            { id: 'price-desc', label: 'Price: High' },
+            { id: 'name', label: 'Name' },
+          ].map((option) => (
+            <button
+              key={option.id}
+              onClick={() => setSortBy(option.id as any)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap border transition-all ${
+                sortBy === option.id 
+                  ? 'bg-[#0d6e5d]/10 text-[#0d6e5d] border-[#0d6e5d]/30' 
+                  : 'bg-white text-[#8b6947] border-[#c9a961]/20'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {/* Results */}
+      <main className="px-4 py-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-10 h-10 border-3 border-[#c9a961]/30 border-t-[#0d6e5d] rounded-full animate-spin"></div>
+          </div>
+        ) : filteredEstates.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="w-16 h-16 bg-[#c9a961]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="w-8 h-8 text-[#c9a961]" />
+            </div>
+            <h3 className="font-serif text-[#0a2540] font-bold mb-2">No Results Found</h3>
+            <p className="text-[#8b6947] text-sm mb-4">Try adjusting your search or filters</p>
+            <button onClick={clearFilters} className="px-4 py-2 bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] text-white rounded-xl text-sm font-semibold">
+              Clear Filters
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredEstates.map((estate) => (
+              <div
+                key={estate.id}
+                onClick={() => navigate(`/estate/${estate.slug}`)}
+                className="bg-white/90 backdrop-blur-xl rounded-2xl overflow-hidden border border-[#c9a961]/10 shadow-lg active:scale-[0.98] transition-transform cursor-pointer"
               >
-                <SlidersHorizontal className="w-5 h-5" />
-                <span className="hidden sm:inline">Filters</span>
+                <div className="relative h-40">
+                  <img src={estate.image_url} alt={estate.name} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a2540]/80 via-transparent to-transparent"></div>
+                  <div className="absolute top-3 left-3 flex gap-2">
+                    <span className="px-2 py-1 bg-gradient-to-r from-[#0d6e5d] to-[#15a88a] rounded-lg text-white text-[10px] font-bold">
+                      {estate.available_plots} Available
+                    </span>
+                  </div>
+                  <button className="absolute top-3 right-3 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                    <Heart className="w-4 h-4 text-white" />
+                  </button>
+                  <div className="absolute bottom-3 left-3 right-3">
+                    <h3 className="font-serif text-white font-bold text-lg">{estate.name}</h3>
+                    <div className="flex items-center gap-1 text-white/80 text-xs">
+                      <MapPin className="w-3 h-3" />
+                      <span>{estate.location}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-[#8b6947] text-[10px]">Starting from</p>
+                    <p className="text-[#0f3d5c] font-serif font-bold text-xl">{formatPrice(estate.min_price)}</p>
+                  </div>
+                  <button className="px-4 py-2.5 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-xl text-white text-xs font-semibold flex items-center gap-1 shadow-lg">
+                    View <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* Filter Modal */}
+      {showFilters && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#0a2540]/60 backdrop-blur-sm">
+          <div className="bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl max-h-[85vh] overflow-hidden border border-[#c9a961]/20">
+            <div className="bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] p-4 flex justify-between items-center">
+              <h3 className="text-white font-serif font-bold">Filters</h3>
+              <button onClick={() => setShowFilters(false)} className="text-white/80"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh] space-y-5">
+              {/* Price Range */}
+              <div>
+                <h4 className="font-serif text-[#0a2540] font-bold text-sm mb-3">Price Range</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[#8b6947] text-[10px] mb-1 block">Min Price</label>
+                    <select value={priceRange[0]} onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])} className="w-full px-3 py-2.5 bg-[#faf8f5] border border-[#c9a961]/20 rounded-xl text-[#0a2540] text-sm">
+                      <option value={0}>Any</option>
+                      <option value={3000000}>₦3M</option>
+                      <option value={5000000}>₦5M</option>
+                      <option value={10000000}>₦10M</option>
+                      <option value={15000000}>₦15M</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[#8b6947] text-[10px] mb-1 block">Max Price</label>
+                    <select value={priceRange[1]} onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])} className="w-full px-3 py-2.5 bg-[#faf8f5] border border-[#c9a961]/20 rounded-xl text-[#0a2540] text-sm">
+                      <option value={10000000}>₦10M</option>
+                      <option value={20000000}>₦20M</option>
+                      <option value={30000000}>₦30M</option>
+                      <option value={50000000}>₦50M+</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Locations */}
+              <div>
+                <h4 className="font-serif text-[#0a2540] font-bold text-sm mb-3">Location</h4>
+                <div className="flex flex-wrap gap-2">
+                  {locations.map((loc) => (
+                    <button
+                      key={loc}
+                      onClick={() => setSelectedLocations(prev => prev.includes(loc) ? prev.filter(l => l !== loc) : [...prev, loc])}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1 ${
+                        selectedLocations.includes(loc)
+                          ? 'bg-[#0d6e5d] text-white border-[#0d6e5d]'
+                          : 'bg-white text-[#8b6947] border-[#c9a961]/20'
+                      }`}
+                    >
+                      {selectedLocations.includes(loc) && <Check className="w-3 h-3" />}
+                      {loc}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Property Type */}
+              <div>
+                <h4 className="font-serif text-[#0a2540] font-bold text-sm mb-3">Property Type</h4>
+                <div className="flex flex-wrap gap-2">
+                  {propertyTypes.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setSelectedTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type])}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1 ${
+                        selectedTypes.includes(type)
+                          ? 'bg-[#0d6e5d] text-white border-[#0d6e5d]'
+                          : 'bg-white text-[#8b6947] border-[#c9a961]/20'
+                      }`}
+                    >
+                      {selectedTypes.includes(type) && <Check className="w-3 h-3" />}
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t border-[#c9a961]/10 flex gap-3">
+              <button onClick={clearFilters} className="flex-1 py-3 bg-[#faf8f5] border border-[#c9a961]/20 rounded-xl text-[#8b6947] text-sm font-semibold">
+                Clear All
+              </button>
+              <button onClick={() => setShowFilters(false)} className="flex-1 py-3 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-xl text-white text-sm font-bold shadow-lg">
+                Apply Filters
               </button>
             </div>
           </div>
-
-          <div className="grid lg:grid-cols-4 gap-6">
-            {/* Filters Sidebar */}
-            {showFilters && (
-              <div className="lg:col-span-1">
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm sticky top-24">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-bold text-gray-900">Filters</h3>
-                    {hasActiveFilters && (
-                      <button 
-                        onClick={handleClearFilters} 
-                        className="text-xs text-blue-900 hover:text-blue-800 font-medium"
-                      >
-                        Clear All
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                          type="text"
-                          placeholder="e.g. Independence Layout"
-                          value={filters.location}
-                          onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-                          className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Price Range (₦)</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="relative">
-                          <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            type="number"
-                            placeholder="Min"
-                            value={filters.minPrice}
-                            onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-                            className="w-full pl-7 pr-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        <div className="relative">
-                          <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            type="number"
-                            placeholder="Max"
-                            value={filters.maxPrice}
-                            onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-                            className="w-full pl-7 pr-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Plot Size (sqm)</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="relative">
-                          <Maximize2 className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            type="number"
-                            placeholder="Min"
-                            value={filters.minSize}
-                            onChange={(e) => setFilters({ ...filters, minSize: e.target.value })}
-                            className="w-full pl-7 pr-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        <div className="relative">
-                          <Maximize2 className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            type="number"
-                            placeholder="Max"
-                            value={filters.maxSize}
-                            onChange={(e) => setFilters({ ...filters, maxSize: e.target.value })}
-                            className="w-full pl-7 pr-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Availability</label>
-                      <select
-                        value={filters.status}
-                        onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="all">All Properties</option>
-                        <option value="available">Available Only</option>
-                        <option value="sold">Sold Out</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Results */}
-            <div className={showFilters ? 'lg:col-span-3' : 'lg:col-span-4'}>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-gray-600">
-                  Showing <span className="font-bold text-gray-900">{filteredEstates.length}</span> of {estates.length} estates
-                </p>
-                {hasActiveFilters && (
-                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
-                    Filters Applied
-                  </span>
-                )}
-              </div>
-
-              {filteredEstates.length === 0 ? (
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-12 text-center shadow-sm">
-                  <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">No properties found</h3>
-                  <p className="text-sm text-gray-600 mb-4">Try adjusting your search criteria or filters</p>
-                  <button
-                    onClick={handleClearFilters}
-                    className="px-6 py-2 bg-blue-900 text-white rounded-lg font-medium hover:bg-blue-800 transition-all text-sm"
-                  >
-                    Clear All Filters
-                  </button>
-                </div>
-              ) : (
-                <div className={`grid ${showFilters ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'} gap-4`}>
-                  {filteredEstates.map((estate, i) => (
-                    <div
-                      key={i}
-                      className="group bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-all cursor-pointer"
-                      onClick={() => navigate(`/estate/${estate.slug}`)}
-                    >
-                      <div className="aspect-video relative overflow-hidden">
-                        <img src={estate.image} alt={estate.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                        <div className="absolute top-2 left-2 px-2 py-1 bg-emerald-600 text-white rounded-full text-xs font-medium">
-                          {estate.available} available
-                        </div>
-                        <div className="absolute top-2 right-2 px-2 py-1 bg-gray-900/80 text-white rounded-full text-xs font-medium">
-                          {estate.plots} plots
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <h4 className="text-base font-bold text-gray-900 mb-2">{estate.name}</h4>
-                        <div className="flex items-center gap-2 text-gray-600 mb-2">
-                          <MapPin className="w-4 h-4" />
-                          <span className="text-xs">{estate.location}</span>
-                        </div>
-                        <div className="flex items-center justify-between mb-3">
-                          <p className="text-sm text-emerald-600 font-semibold">₦{estate.priceRange}</p>
-                          <p className="text-xs text-gray-500">{estate.minSize}-{estate.maxSize} sqm</p>
-                        </div>
-                        <button className="w-full py-2 bg-blue-900 text-white rounded-lg font-medium hover:bg-blue-800 transition-all text-xs">
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
         </div>
-      </div>
+      )}
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-[#c9a961]/20 px-4 py-2 z-30">
+        <div className="flex items-center justify-around max-w-md mx-auto">
+          {[
+            { icon: Home, label: 'Home', path: '/dashboard', active: false },
+            { icon: Search, label: 'Search', path: '/search', active: true },
+            { icon: Building2, label: 'Services', path: '/services/document-verification', active: false },
+            { icon: Heart, label: 'Saved', path: '/portfolio', active: false },
+          ].map((item) => (
+            <button key={item.path} onClick={() => navigate(item.path)} className="flex flex-col items-center py-1">
+              <div className={`p-2 rounded-xl ${item.active ? 'bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d]' : ''}`}>
+                <item.icon className={`w-5 h-5 ${item.active ? 'text-white' : 'text-[#8b6947]'}`} />
+              </div>
+              <span className={`text-[10px] font-medium ${item.active ? 'text-[#0f3d5c]' : 'text-[#8b6947]'}`}>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }

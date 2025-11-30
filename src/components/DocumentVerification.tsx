@@ -2,409 +2,210 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Search, Shield, CheckCircle, XCircle, Clock,
-  FileText, QrCode, Camera, Upload, AlertCircle, Sparkles,
-  Download, Share2, Printer, User, MapPin, Calendar, Award
+  FileText, Upload, AlertCircle, Crown, Loader2, Home
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+interface VerificationResult {
+  status: 'valid' | 'invalid' | 'pending';
+  documentType: string;
+  ownerName: string;
+  plotNumber: string;
+  location: string;
+  registrationDate: string;
+  expiryDate?: string;
+}
+
 export default function DocumentVerification() {
   const navigate = useNavigate();
-  const [searchMethod, setSearchMethod] = useState<'manual' | 'qr'>('manual');
-  const [documentNumber, setDocumentNumber] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<VerificationResult | null>(null);
 
-  const handleSearch = () => {
-    if (!documentNumber.trim()) {
+  const handleVerify = async () => {
+    if (!searchQuery.trim()) {
       toast.error('Please enter a document number');
       return;
     }
-
-    setSearching(true);
+    setLoading(true);
     setResult(null);
-
-    setTimeout(() => {
-      setSearching(false);
-      
-      if (documentNumber.toLowerCase().includes('en') || documentNumber.length > 5) {
-        setResult({
-          status: 'verified',
-          documentNumber: documentNumber.toUpperCase(),
-          propertyId: 'PROP-2024-' + Math.floor(Math.random() * 10000),
-          owner: 'Chief Emmanuel Okonkwo',
-          location: 'Plot 45, Legacy Estate, Independence Layout, Enugu',
-          registrationDate: '15th January, 2024',
-          expiryDate: '14th January, 2074',
-          type: 'Certificate of Occupancy (C of O)',
-          size: '900 sqm',
-          lga: 'Enugu North',
-          commissioner: 'Hon. Barr. Peter Mbah',
-          commissionerTitle: 'Commissioner for Lands & Urban Development',
-          fileNumber: 'EN/LANDS/COO/2024/00456',
-          qrCode: `ESDLRTH-${documentNumber.toUpperCase()}-${Date.now()}`
-        });
-        toast.success('Document verified successfully!');
-      } else {
-        setResult({
-          status: 'not_found'
-        });
-        toast.error('Document not found');
-      }
-    }, 2000);
-  };
-
-  const handleQRScan = () => {
-    toast('QR Scanner opening...', { icon: '📷' });
-  };
-
-  const handleDownloadCertificate = () => {
-    toast.success('Certificate downloaded!');
-  };
-
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: 'Land Document Verification',
-        text: `Document ${result.documentNumber} has been verified by Enugu State Land Registry`,
-        url: window.location.href
+    
+    // Simulate verification
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Demo result
+    if (searchQuery.toLowerCase().includes('valid') || searchQuery.length > 5) {
+      setResult({
+        status: 'valid',
+        documentType: 'Certificate of Occupancy',
+        ownerName: 'James Okonkwo',
+        plotNumber: 'LE-015',
+        location: 'Legacy Estate, Independence Layout',
+        registrationDate: '2024-01-15',
+        expiryDate: '2099-01-15'
       });
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success('Verification link copied!');
+      setResult({
+        status: 'invalid',
+        documentType: 'Unknown',
+        ownerName: '-',
+        plotNumber: '-',
+        location: '-',
+        registrationDate: '-'
+      });
+    }
+    setLoading(false);
+  };
+
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case 'valid':
+        return { icon: CheckCircle, color: 'text-[#0d6e5d]', bg: 'bg-[#0d6e5d]/10', border: 'border-[#0d6e5d]/30', label: 'Verified & Valid' };
+      case 'invalid':
+        return { icon: XCircle, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-200', label: 'Invalid Document' };
+      default:
+        return { icon: Clock, color: 'text-[#c9a961]', bg: 'bg-[#c9a961]/10', border: 'border-[#c9a961]/30', label: 'Pending Verification' };
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
+    <div className="min-h-screen bg-[#faf8f5] pb-8">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-10 border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-xl">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Verify Document</h1>
-            <p className="text-sm text-gray-600">Check document authenticity</p>
+      <header className="bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] pt-4 pb-20 px-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-[#c9a961]/10 rounded-full blur-3xl"></div>
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-6">
+            <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/10 rounded-xl">
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <div>
+              <h1 className="font-serif text-white font-bold">Document Verification</h1>
+              <p className="text-white/70 text-xs">Verify land documents authenticity</p>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b6947]" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Enter document number or title ID"
+                className="w-full pl-11 pr-4 py-3 bg-white rounded-xl text-[#0a2540] text-sm placeholder-[#8b6947]/50 focus:outline-none focus:ring-2 focus:ring-[#c9a961] shadow-lg"
+                onKeyPress={(e) => e.key === 'Enter' && handleVerify()}
+              />
+            </div>
+            <button onClick={handleVerify} disabled={loading} className="px-4 py-3 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-xl text-white font-semibold shadow-lg disabled:opacity-70">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Info Banner */}
-        <div className="bg-gradient-to-r from-blue-900 to-blue-800 rounded-2xl p-6 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl"></div>
-          <div className="relative flex items-start gap-4">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Shield className="w-6 h-6" />
+      <main className="px-4 -mt-10 relative z-10">
+        {/* Info Card */}
+        {!result && !loading && (
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-5 border border-[#c9a961]/20 shadow-xl mb-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] rounded-xl flex items-center justify-center">
+                <Shield className="w-6 h-6 text-[#c9a961]" />
+              </div>
+              <div>
+                <h2 className="font-serif text-[#0a2540] font-bold">Verify Any Document</h2>
+                <p className="text-[#8b6947] text-xs">Check the authenticity of land documents</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-bold mb-1">Government Verified Security</h2>
-              <p className="text-blue-200 text-sm">
-                All property documents are verified against the Enugu State Land Registry. 
-                Enter your document number or scan the QR code to verify authenticity instantly.
-              </p>
+            
+            <div className="space-y-3">
+              <p className="text-[#8b6947] text-xs">You can verify:</p>
+              <div className="grid grid-cols-2 gap-2">
+                {['Certificate of Occupancy', 'Deed of Assignment', 'Survey Plan', 'Governor\'s Consent', 'Right of Occupancy', 'Building Permit'].map((doc, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2 bg-[#faf8f5] rounded-lg">
+                    <CheckCircle className="w-3.5 h-3.5 text-[#0d6e5d]" />
+                    <span className="text-[10px] text-[#0a2540]">{doc}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Verification Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          {/* Method Toggle */}
-          <div className="flex border-b border-gray-100">
-            <button
-              onClick={() => setSearchMethod('manual')}
-              className={`flex-1 py-4 text-sm font-medium border-b-2 transition-all flex items-center justify-center gap-2 ${
-                searchMethod === 'manual'
-                  ? 'border-blue-900 text-blue-900 bg-blue-50/50'
-                  : 'border-transparent text-gray-500'
-              }`}
-            >
-              <Search className="w-4 h-4" />
-              Enter Document Number
-            </button>
-            <button
-              onClick={() => setSearchMethod('qr')}
-              className={`flex-1 py-4 text-sm font-medium border-b-2 transition-all flex items-center justify-center gap-2 ${
-                searchMethod === 'qr'
-                  ? 'border-blue-900 text-blue-900 bg-blue-50/50'
-                  : 'border-transparent text-gray-500'
-              }`}
-            >
-              <QrCode className="w-4 h-4" />
-              Scan QR Code
-            </button>
-          </div>
-
-          <div className="p-6">
-            {searchMethod === 'manual' ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Document / Certificate Number
-                  </label>
-                  <div className="relative">
-                    <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="e.g., EN/2024/COO/12345"
-                      value={documentNumber}
-                      onChange={(e) => setDocumentNumber(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={handleSearch}
-                  disabled={searching}
-                  className="w-full py-4 bg-gradient-to-r from-blue-900 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-800 hover:to-blue-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {searching ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Verifying...
-                    </>
-                  ) : (
-                    <>
-                      <Shield className="w-5 h-5" />
-                      Verify Document
-                    </>
-                  )}
-                </button>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="w-48 h-48 mx-auto bg-gray-100 rounded-2xl flex items-center justify-center mb-4 border-2 border-dashed border-gray-300">
-                  <div className="text-center">
-                    <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">Camera preview</p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleQRScan}
-                  className="px-8 py-3 bg-gradient-to-r from-blue-900 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-800 hover:to-blue-600 transition-all"
-                >
-                  Start Scanning
-                </button>
-                <p className="text-sm text-gray-500 mt-4">
-                  Position the QR code within the frame to scan
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Result */}
-        {result && (
-          <>
-            {result.status === 'verified' ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden print:shadow-none">
-                {/* Verified Header */}
-                <div className="bg-emerald-500 text-white p-4 flex items-center gap-3">
-                  <CheckCircle className="w-6 h-6" />
-                  <div>
-                    <p className="font-bold">Document Verified ✓</p>
-                    <p className="text-emerald-100 text-sm">This document is authentic and registered with Enugu State</p>
-                  </div>
-                </div>
-
-                {/* Certificate Content */}
-                <div className="p-6">
-                  {/* QR Code Section */}
-                  <div className="flex flex-col sm:flex-row gap-6 mb-6 pb-6 border-b border-gray-200">
-                    <div className="flex-shrink-0 mx-auto sm:mx-0">
-                      <div className="w-32 h-32 bg-gray-100 rounded-xl flex items-center justify-center border-2 border-gray-200">
-                        <div className="text-center">
-                          <QrCode className="w-16 h-16 text-gray-800 mx-auto" />
-                          <p className="text-xs text-gray-500 mt-1">Scan to verify</p>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-400 text-center mt-2 font-mono">{result.qrCode.substring(0, 20)}...</p>
-                    </div>
-                    <div className="flex-1 text-center sm:text-left">
-                      <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
-                        <Award className="w-5 h-5 text-amber-500" />
-                        <span className="text-sm font-medium text-amber-600">VERIFIED DOCUMENT</span>
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-1">{result.type}</h3>
-                      <p className="text-gray-600 text-sm">File No: {result.fileNumber}</p>
-                    </div>
-                  </div>
-
-                  {/* Property Details */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Document Number</p>
-                        <p className="font-semibold text-gray-900">{result.documentNumber}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <User className="w-5 h-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Property Owner</p>
-                        <p className="font-semibold text-gray-900">{result.owner}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <MapPin className="w-5 h-5 text-emerald-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Property Location</p>
-                        <p className="font-semibold text-gray-900">{result.location}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Calendar className="w-5 h-5 text-amber-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Registration Date</p>
-                        <p className="font-semibold text-gray-900">{result.registrationDate}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Clock className="w-5 h-5 text-red-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Valid Until</p>
-                        <p className="font-semibold text-gray-900">{result.expiryDate}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Shield className="w-5 h-5 text-gray-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Plot Size</p>
-                        <p className="font-semibold text-gray-900">{result.size}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Commissioner Signature */}
-                  <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">Authorized By</p>
-                        <p className="font-bold text-gray-900">{result.commissioner}</p>
-                        <p className="text-sm text-gray-600">{result.commissionerTitle}</p>
-                        <p className="text-xs text-gray-500 mt-1">Enugu State Government</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="w-24 h-16 border-b-2 border-gray-400 flex items-end justify-center mb-1">
-                          <span className="text-gray-400 italic text-sm">Signature</span>
-                        </div>
-                        <div className="w-16 h-16 bg-blue-900/10 rounded-full flex items-center justify-center mx-auto">
-                          <span className="text-xs text-blue-900 font-bold">SEAL</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Verification Time */}
-                  <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-                    <Sparkles className="w-4 h-4 text-emerald-500" />
-                    <span>Verified on {new Date().toLocaleString()}</span>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap gap-3 print:hidden">
-                    <button
-                      onClick={handleDownloadCertificate}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-blue-900 text-white rounded-xl font-medium hover:bg-blue-800 transition-all"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download
-                    </button>
-                    <button
-                      onClick={handlePrint}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-xl font-medium hover:bg-gray-50 transition-all"
-                    >
-                      <Printer className="w-4 h-4" />
-                      Print
-                    </button>
-                    <button
-                      onClick={handleShare}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-xl font-medium hover:bg-gray-50 transition-all"
-                    >
-                      <Share2 className="w-4 h-4" />
-                      Share
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-red-50 border border-red-200 rounded-2xl overflow-hidden">
-                <div className="bg-red-500 text-white p-4 flex items-center gap-3">
-                  <XCircle className="w-6 h-6" />
-                  <div>
-                    <p className="font-bold">Document Not Found</p>
-                    <p className="text-red-100 text-sm">This document could not be verified</p>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-gray-700">
-                        The document number you entered was not found in our registry. This could mean:
-                      </p>
-                      <ul className="list-disc list-inside text-sm text-gray-600 mt-2 space-y-1">
-                        <li>The document number was entered incorrectly</li>
-                        <li>The document is not registered with Enugu State</li>
-                        <li>The document may be fraudulent</li>
-                      </ul>
-                      <p className="text-sm text-gray-700 mt-3">
-                        Please double-check the number or contact support for assistance.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
         )}
 
-        {/* Tips */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h3 className="font-bold text-gray-900 mb-4">Verification Tips</h3>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-blue-900 text-xs font-bold">1</span>
+        {/* Loading */}
+        {loading && (
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-8 border border-[#c9a961]/20 shadow-xl text-center">
+            <div className="w-16 h-16 border-4 border-[#c9a961]/30 border-t-[#0d6e5d] rounded-full animate-spin mx-auto mb-4"></div>
+            <h3 className="font-serif text-[#0a2540] font-bold mb-1">Verifying Document</h3>
+            <p className="text-[#8b6947] text-xs">Please wait while we check the database...</p>
+          </div>
+        )}
+
+        {/* Result */}
+        {result && !loading && (
+          <div className="space-y-4">
+            {/* Status Card */}
+            <div className={`${getStatusConfig(result.status).bg} rounded-2xl p-4 border ${getStatusConfig(result.status).border}`}>
+              <div className="flex items-center gap-3">
+                {React.createElement(getStatusConfig(result.status).icon, { className: `w-8 h-8 ${getStatusConfig(result.status).color}` })}
+                <div>
+                  <h3 className={`font-serif font-bold ${getStatusConfig(result.status).color}`}>{getStatusConfig(result.status).label}</h3>
+                  <p className="text-[#8b6947] text-xs">Document Number: {searchQuery}</p>
+                </div>
               </div>
-              <p className="text-sm text-gray-600">Enter the exact document number as shown on your certificate</p>
             </div>
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-blue-900 text-xs font-bold">2</span>
+
+            {/* Details Card */}
+            {result.status === 'valid' && (
+              <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-[#c9a961]/20 shadow-xl overflow-hidden">
+                <div className="bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] p-4">
+                  <div className="flex items-center gap-2">
+                    <Crown className="w-5 h-5 text-[#c9a961]" />
+                    <h3 className="text-white font-serif font-bold">Document Details</h3>
+                  </div>
+                </div>
+                <div className="p-4 space-y-3">
+                  {[
+                    { label: 'Document Type', value: result.documentType },
+                    { label: 'Owner Name', value: result.ownerName },
+                    { label: 'Plot Number', value: result.plotNumber },
+                    { label: 'Location', value: result.location },
+                    { label: 'Registration Date', value: new Date(result.registrationDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) },
+                    { label: 'Valid Until', value: result.expiryDate ? new Date(result.expiryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Perpetuity' },
+                  ].map((item, i) => (
+                    <div key={i} className="flex justify-between items-center py-2 border-b border-[#c9a961]/10 last:border-0">
+                      <span className="text-[#8b6947] text-xs">{item.label}</span>
+                      <span className="text-[#0a2540] font-semibold text-xs text-right">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <p className="text-sm text-gray-600">For faster verification, use the QR code scanner if your document has one</p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-blue-900 text-xs font-bold">3</span>
+            )}
+
+            {/* Invalid Result */}
+            {result.status === 'invalid' && (
+              <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-serif text-[#0a2540] font-bold text-sm mb-1">Document Not Found</h3>
+                    <p className="text-[#8b6947] text-xs">The document number you entered does not exist in our database. Please check the number and try again, or contact support for assistance.</p>
+                  </div>
+                </div>
               </div>
-              <p className="text-sm text-gray-600">Contact support if you have issues verifying a legitimate document</p>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button onClick={() => { setResult(null); setSearchQuery(''); }} className="flex-1 py-3 bg-[#faf8f5] border border-[#c9a961]/20 rounded-xl text-[#8b6947] text-sm font-semibold">
+                New Search
+              </button>
+              <button onClick={() => navigate('/dashboard')} className="flex-1 py-3 bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] rounded-xl text-white text-sm font-bold shadow-lg">
+                <Home className="w-4 h-4 inline mr-1" /> Dashboard
+              </button>
             </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );
