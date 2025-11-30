@@ -1,558 +1,492 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Home, LogOut, Bell, User, Lock, Settings, Save, ArrowLeft, Mail, Phone, MapPin, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import {
+  ArrowLeft,
+  User as UserIcon,
+  Mail,
+  Phone,
+  MapPin,
+  Shield,
+  Bell,
+  Eye,
+  EyeOff,
+  Camera,
+  CheckCircle2,
+  Edit3,
+  Lock,
+  Globe,
+  CreditCard,
+  FileText,
+  Sparkles,
+  ChevronRight,
+  LogOut,
+  Trash2,
+  Home,
+  Search,
+  Building2,
+  Heart,
+  User
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
-interface UserSettingsProps {
-  user: any;
-  onLogout: () => void;
-  onUpdateUser: (userData: any) => void;
-}
-
-export default function UserSettings({ user, onLogout, onUpdateUser }: UserSettingsProps) {
+const UserSettings = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('profile');
-  const [saving, setSaving] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  
-  const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '+234 ',
-    address: '',
-    city: 'Enugu',
+  const location = useLocation();
+  const [activeSection, setActiveSection] = useState<'profile' | 'security' | 'notifications' | 'preferences'>('profile');
+  const [isEditing, setIsEditing] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [profile, setProfile] = useState({
+    name: 'James Okonkwo',
+    email: 'james.okonkwo@email.com',
+    phone: '+234 801 234 5678',
+    nin: '12345678901',
+    address: 'No. 15, Independence Layout, Enugu',
     state: 'Enugu',
+    lga: 'Enugu North',
   });
-  
-  const [passwordData, setPasswordData] = useState({
+
+  const [security, setSecurity] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
+    twoFactorEnabled: true,
   });
-  
+
   const [notifications, setNotifications] = useState({
     emailNotifications: true,
     smsNotifications: true,
-    pushNotifications: false,
-    marketingEmails: false,
-    transactionAlerts: true,
+    paymentAlerts: true,
     documentUpdates: true,
+    promotionalEmails: false,
   });
 
   const [preferences, setPreferences] = useState({
-    language: 'english',
+    language: 'English',
     currency: 'NGN',
-    timezone: 'Africa/Lagos',
+    theme: 'light',
   });
 
-  const handleProfileUpdate = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name.trim()) {
-      toast.error('Please enter your name');
-      return;
-    }
-    if (!formData.email.trim() || !formData.email.includes('@')) {
-      toast.error('Please enter a valid email address');
-      return;
-    }
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setProfile({ ...profile, [e.target.name]: e.target.value });
+  };
 
-    setSaving(true);
-    toast.loading('Saving your profile...', { id: 'profile' });
-
+  const handleSaveProfile = () => {
+    setIsSaving(true);
     setTimeout(() => {
-      toast.dismiss('profile');
-      onUpdateUser(formData);
-      setSaving(false);
+      setIsSaving(false);
+      setIsEditing(false);
       toast.success('Profile updated successfully!');
     }, 1500);
   };
 
-  const handlePasswordChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!passwordData.currentPassword) {
-      toast.error('Please enter your current password');
+  const handleChangePassword = () => {
+    if (security.newPassword !== security.confirmPassword) {
+      toast.error('Passwords do not match');
       return;
     }
-    if (!passwordData.newPassword) {
-      toast.error('Please enter a new password');
+    if (security.newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters');
       return;
     }
-    if (passwordData.newPassword.length < 8) {
-      toast.error('New password must be at least 8 characters');
-      return;
-    }
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error('New passwords do not match');
-      return;
-    }
-    if (passwordData.currentPassword === passwordData.newPassword) {
-      toast.error('New password must be different from current password');
-      return;
-    }
-
-    setSaving(true);
-    toast.loading('Updating your password...', { id: 'password' });
-
+    setIsSaving(true);
     setTimeout(() => {
-      toast.dismiss('password');
-      setSaving(false);
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      toast.success('Password changed successfully! Please use your new password next time you login.');
+      setIsSaving(false);
+      setSecurity({ ...security, currentPassword: '', newPassword: '', confirmPassword: '' });
+      toast.success('Password changed successfully!');
     }, 1500);
   };
 
-  const handleNotificationUpdate = () => {
-    setSaving(true);
-    toast.loading('Saving notification preferences...', { id: 'notif' });
-
-    setTimeout(() => {
-      toast.dismiss('notif');
-      setSaving(false);
-      toast.success('Notification preferences updated!');
-    }, 1000);
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    toast.success('Logged out successfully');
+    navigate('/login');
   };
 
-  const handlePreferencesUpdate = () => {
-    setSaving(true);
-    toast.loading('Saving preferences...', { id: 'pref' });
+  const isActive = (path: string) => location.pathname === path;
 
-    setTimeout(() => {
-      toast.dismiss('pref');
-      setSaving(false);
-      toast.success('Preferences saved successfully!');
-    }, 1000);
-  };
-
-  const tabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'security', label: 'Security', icon: Lock },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'preferences', label: 'Preferences', icon: Settings },
+  const sections = [
+    { id: 'profile', name: 'Profile', icon: UserIcon },
+    { id: 'security', name: 'Security', icon: Shield },
+    { id: 'notifications', name: 'Notifications', icon: Bell },
+    { id: 'preferences', name: 'Preferences', icon: Globe },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
-      {/* Blurred Background */}
-      <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-gray-50/98 to-white/95 z-10"></div>
-        <img src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=1920&q=80" alt="Settings" className="w-full h-full object-cover opacity-20 blur-md" />
-      </div>
-
-      {/* Content */}
-      <div className="relative z-20">
-        {/* Header */}
-        <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-900 to-blue-700 rounded-lg flex items-center justify-center">
-                  <Home className="w-6 h-6 text-amber-400" />
-                </div>
-                <div>
-                  <h1 className="text-base font-bold text-gray-900">Enugu State Land Registry</h1>
-                  <p className="text-xs text-gray-600">Account Settings</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                  <Bell className="w-5 h-5 text-gray-700" />
-                </button>
-                <button onClick={onLogout} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                  <LogOut className="w-5 h-5 text-gray-700" />
-                </button>
-              </div>
+    <div className="min-h-screen bg-[#faf8f5] pb-24">
+      {/* Header */}
+      <header className="bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] pt-4 pb-24 px-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-[#c9a961]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-6">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <div>
+              <h1 className="font-serif text-white text-xl font-bold">Account Settings</h1>
+              <p className="text-white/70 text-xs">Manage your account preferences</p>
             </div>
           </div>
-        </header>
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-          <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 text-sm">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
-          </button>
-
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Account Settings</h1>
-            <p className="text-sm text-gray-600">Manage your profile, security, and preferences</p>
-          </div>
-
-          <div className="grid lg:grid-cols-4 gap-6">
-            {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-4 shadow-sm">
-                {/* User Info */}
-                <div className="flex items-center gap-3 pb-4 mb-4 border-b border-gray-200">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-900 to-blue-700 rounded-full flex items-center justify-center">
-                    <span className="text-white text-lg font-bold">{user?.name?.[0]?.toUpperCase() || 'U'}</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">{user?.name || 'User'}</p>
-                    <p className="text-xs text-gray-600 truncate max-w-[150px]">{user?.email}</p>
-                  </div>
-                </div>
-
-                {/* Tabs */}
-                <div className="space-y-1">
-                  {tabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-medium ${
-                        activeTab === tab.id 
-                          ? 'bg-blue-900 text-white' 
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <tab.icon className="w-5 h-5" />
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
+          {/* Profile Avatar */}
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-20 h-20 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center border border-white/30">
+                <span className="text-3xl font-serif font-bold text-white">
+                  {profile.name.charAt(0)}
+                </span>
               </div>
+              <button className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-xl flex items-center justify-center shadow-lg">
+                <Camera className="w-4 h-4 text-white" />
+              </button>
             </div>
-
-            {/* Main Content */}
-            <div className="lg:col-span-3">
-              {/* Profile Tab */}
-              {activeTab === 'profile' && (
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm">
-                  <h2 className="text-lg font-bold text-gray-900 mb-6">Profile Information</h2>
-                  <form onSubmit={handleProfileUpdate}>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-                          <div className="relative">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <input
-                              type="text"
-                              value={formData.name}
-                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                              disabled={saving}
-                              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                              placeholder="Enter your full name"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <input
-                              type="email"
-                              value={formData.email}
-                              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                              disabled={saving}
-                              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                              placeholder="Enter your email"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                          <div className="relative">
-                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <input
-                              type="tel"
-                              value={formData.phone}
-                              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                              disabled={saving}
-                              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                              placeholder="+234 XXX XXX XXXX"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                          <div className="relative">
-                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <input
-                              type="text"
-                              value={formData.city}
-                              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                              disabled={saving}
-                              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                              placeholder="Enter your city"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-                        <input
-                          type="text"
-                          value={formData.address}
-                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                          disabled={saving}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                          placeholder="Enter your street address"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
-                        <select
-                          value={formData.state}
-                          onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                          disabled={saving}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                        >
-                          <option value="Enugu">Enugu</option>
-                          <option value="Lagos">Lagos</option>
-                          <option value="Abuja">Abuja FCT</option>
-                          <option value="Rivers">Rivers</option>
-                          <option value="Kano">Kano</option>
-                        </select>
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={saving}
-                        className="w-full py-3 bg-blue-900 text-white rounded-lg font-semibold hover:bg-blue-800 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        {saving ? (
-                          <>
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            Saving...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="w-5 h-5" />
-                            Save Changes
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-
-              {/* Security Tab */}
-              {activeTab === 'security' && (
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm">
-                  <h2 className="text-lg font-bold text-gray-900 mb-6">Change Password</h2>
-                  <form onSubmit={handlePasswordChange}>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Current Password *</label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                          <input
-                            type={showCurrentPassword ? 'text' : 'password'}
-                            value={passwordData.currentPassword}
-                            onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                            disabled={saving}
-                            className="w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                            placeholder="Enter current password"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          >
-                            {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">New Password *</label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                          <input
-                            type={showNewPassword ? 'text' : 'password'}
-                            value={passwordData.newPassword}
-                            onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                            disabled={saving}
-                            className="w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                            placeholder="Enter new password (min. 8 characters)"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          >
-                            {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                          </button>
-                        </div>
-                        {passwordData.newPassword && passwordData.newPassword.length < 8 && (
-                          <p className="text-xs text-red-500 mt-1">Password must be at least 8 characters</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password *</label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                          <input
-                            type="password"
-                            value={passwordData.confirmPassword}
-                            onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                            disabled={saving}
-                            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                            placeholder="Confirm new password"
-                          />
-                        </div>
-                        {passwordData.confirmPassword && passwordData.newPassword !== passwordData.confirmPassword && (
-                          <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
-                        )}
-                        {passwordData.confirmPassword && passwordData.newPassword === passwordData.confirmPassword && passwordData.newPassword.length >= 8 && (
-                          <p className="text-xs text-emerald-500 mt-1 flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" /> Passwords match
-                          </p>
-                        )}
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={saving}
-                        className="w-full py-3 bg-blue-900 text-white rounded-lg font-semibold hover:bg-blue-800 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        {saving ? (
-                          <>
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            Updating...
-                          </>
-                        ) : (
-                          'Update Password'
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-
-              {/* Notifications Tab */}
-              {activeTab === 'notifications' && (
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm">
-                  <h2 className="text-lg font-bold text-gray-900 mb-6">Notification Preferences</h2>
-                  <div className="space-y-4">
-                    {[
-                      { key: 'emailNotifications', label: 'Email Notifications', desc: 'Receive updates and alerts via email' },
-                      { key: 'smsNotifications', label: 'SMS Notifications', desc: 'Receive text messages for important updates' },
-                      { key: 'transactionAlerts', label: 'Transaction Alerts', desc: 'Get notified about payment activities' },
-                      { key: 'documentUpdates', label: 'Document Updates', desc: 'Receive alerts when documents are verified' },
-                      { key: 'pushNotifications', label: 'Push Notifications', desc: 'Receive browser push notifications' },
-                      { key: 'marketingEmails', label: 'Marketing Emails', desc: 'Receive promotional content and offers' },
-                    ].map((item) => (
-                      <div key={item.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{item.label}</p>
-                          <p className="text-xs text-gray-600">{item.desc}</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={notifications[item.key as keyof typeof notifications]}
-                            onChange={(e) => setNotifications({ ...notifications, [item.key]: e.target.checked })}
-                            disabled={saving}
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-900"></div>
-                        </label>
-                      </div>
-                    ))}
-
-                    <button
-                      onClick={handleNotificationUpdate}
-                      disabled={saving}
-                      className="w-full py-3 bg-blue-900 text-white rounded-lg font-semibold hover:bg-blue-800 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {saving ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-5 h-5" />
-                          Save Preferences
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Preferences Tab */}
-              {activeTab === 'preferences' && (
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm">
-                  <h2 className="text-lg font-bold text-gray-900 mb-6">Account Preferences</h2>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
-                      <select 
-                        value={preferences.language}
-                        onChange={(e) => setPreferences({ ...preferences, language: e.target.value })}
-                        disabled={saving}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                      >
-                        <option value="english">English</option>
-                        <option value="igbo">Igbo</option>
-                        <option value="hausa">Hausa</option>
-                        <option value="yoruba">Yoruba</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Currency Display</label>
-                      <select 
-                        value={preferences.currency}
-                        onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
-                        disabled={saving}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                      >
-                        <option value="NGN">₦ Nigerian Naira (NGN)</option>
-                        <option value="USD">$ US Dollar (USD)</option>
-                        <option value="GBP">£ British Pound (GBP)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
-                      <select 
-                        value={preferences.timezone}
-                        onChange={(e) => setPreferences({ ...preferences, timezone: e.target.value })}
-                        disabled={saving}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                      >
-                        <option value="Africa/Lagos">Africa/Lagos (WAT)</option>
-                        <option value="UTC">UTC</option>
-                        <option value="Europe/London">Europe/London (GMT)</option>
-                      </select>
-                    </div>
-
-                    <button 
-                      onClick={handlePreferencesUpdate}
-                      disabled={saving}
-                      className="w-full py-3 bg-blue-900 text-white rounded-lg font-semibold hover:bg-blue-800 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {saving ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-5 h-5" />
-                          Save Preferences
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div>
+              <h2 className="text-white font-bold text-lg">{profile.name}</h2>
+              <p className="text-white/70 text-sm">{profile.email}</p>
+              <div className="flex items-center gap-1 mt-1">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span className="text-emerald-400 text-xs font-medium">Verified</span>
+              </div>
             </div>
           </div>
         </div>
+      </header>
+
+      {/* Section Tabs */}
+      <div className="px-4 -mt-10 relative z-10 mb-6">
+        <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-2 border border-[#c9a961]/20 shadow-xl flex gap-1 overflow-x-auto">
+          {sections.map((section) => {
+            const Icon = section.icon;
+            return (
+              <button
+                key={section.id}
+                onClick={() => setActiveSection(section.id as typeof activeSection)}
+                className={`flex-1 min-w-[80px] py-2.5 px-3 rounded-xl text-xs font-medium transition-all flex flex-col items-center gap-1 ${
+                  activeSection === section.id
+                    ? 'bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] text-white shadow-lg'
+                    : 'text-[#8b6947] hover:bg-[#faf8f5]'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {section.name}
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Content */}
+      <div className="px-4 space-y-6">
+        {activeSection === 'profile' && (
+          <>
+            {/* Profile Form */}
+            <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-serif text-[#0a2540] font-bold flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#c9a961]" />
+                  Personal Information
+                </h3>
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className={`p-2 rounded-xl transition-all ${
+                    isEditing
+                      ? 'bg-[#0d6e5d]/10 text-[#0d6e5d]'
+                      : 'bg-[#faf8f5] text-[#8b6947]'
+                  }`}
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Full Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={profile.name}
+                    onChange={handleProfileChange}
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm disabled:opacity-60 focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Email Address</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={profile.email}
+                    onChange={handleProfileChange}
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm disabled:opacity-60 focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Phone Number</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={profile.phone}
+                    onChange={handleProfileChange}
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm disabled:opacity-60 focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">NIN</label>
+                  <input
+                    type="text"
+                    name="nin"
+                    value={profile.nin}
+                    disabled
+                    className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm opacity-60"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Address</label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={profile.address}
+                    onChange={handleProfileChange}
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm disabled:opacity-60 focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
+                  />
+                </div>
+              </div>
+
+              {isEditing && (
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={isSaving}
+                  className="w-full mt-4 py-3 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-xl text-white font-semibold shadow-lg flex items-center justify-center gap-2 disabled:opacity-70"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5" />
+                      Save Changes
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </>
+        )}
+
+        {activeSection === 'security' && (
+          <>
+            {/* Change Password */}
+            <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl">
+              <h3 className="font-serif text-[#0a2540] font-bold mb-4 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-[#c9a961]" />
+                Change Password
+              </h3>
+              <div className="space-y-4">
+                <div className="relative">
+                  <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Current Password</label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={security.currentPassword}
+                    onChange={(e) => setSecurity({ ...security, currentPassword: e.target.value })}
+                    className="w-full px-4 py-3 pr-12 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-8 text-[#8b6947]"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">New Password</label>
+                  <input
+                    type="password"
+                    value={security.newPassword}
+                    onChange={(e) => setSecurity({ ...security, newPassword: e.target.value })}
+                    className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Confirm New Password</label>
+                  <input
+                    type="password"
+                    value={security.confirmPassword}
+                    onChange={(e) => setSecurity({ ...security, confirmPassword: e.target.value })}
+                    className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
+                  />
+                </div>
+                <button
+                  onClick={handleChangePassword}
+                  disabled={isSaving}
+                  className="w-full py-3 bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] rounded-xl text-white font-semibold shadow-lg disabled:opacity-70"
+                >
+                  Update Password
+                </button>
+              </div>
+            </div>
+
+            {/* Two-Factor */}
+            <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#0f3d5c]/10 to-[#0d6e5d]/10 rounded-xl flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-[#0d6e5d]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[#0a2540]">Two-Factor Authentication</p>
+                    <p className="text-xs text-[#8b6947]">Extra security for your account</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSecurity({ ...security, twoFactorEnabled: !security.twoFactorEnabled })}
+                  className={`w-12 h-6 rounded-full transition-all ${
+                    security.twoFactorEnabled ? 'bg-[#0d6e5d]' : 'bg-gray-300'
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                      security.twoFactorEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeSection === 'notifications' && (
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl space-y-4">
+            <h3 className="font-serif text-[#0a2540] font-bold flex items-center gap-2">
+              <Bell className="w-4 h-4 text-[#c9a961]" />
+              Notification Preferences
+            </h3>
+            {[
+              { key: 'emailNotifications', label: 'Email Notifications', desc: 'Receive updates via email' },
+              { key: 'smsNotifications', label: 'SMS Notifications', desc: 'Receive SMS alerts' },
+              { key: 'paymentAlerts', label: 'Payment Alerts', desc: 'Notifications for payments' },
+              { key: 'documentUpdates', label: 'Document Updates', desc: 'Updates on document status' },
+              { key: 'promotionalEmails', label: 'Promotional Emails', desc: 'Marketing and offers' },
+            ].map((item) => (
+              <div key={item.key} className="flex items-center justify-between py-2 border-b border-[#c9a961]/10 last:border-0">
+                <div>
+                  <p className="text-sm font-medium text-[#0a2540]">{item.label}</p>
+                  <p className="text-xs text-[#8b6947]">{item.desc}</p>
+                </div>
+                <button
+                  onClick={() =>
+                    setNotifications({
+                      ...notifications,
+                      [item.key]: !notifications[item.key as keyof typeof notifications],
+                    })
+                  }
+                  className={`w-12 h-6 rounded-full transition-all ${
+                    notifications[item.key as keyof typeof notifications] ? 'bg-[#0d6e5d]' : 'bg-gray-300'
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                      notifications[item.key as keyof typeof notifications] ? 'translate-x-6' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeSection === 'preferences' && (
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl space-y-4">
+            <h3 className="font-serif text-[#0a2540] font-bold flex items-center gap-2">
+              <Globe className="w-4 h-4 text-[#c9a961]" />
+              App Preferences
+            </h3>
+            <div>
+              <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Language</label>
+              <select
+                value={preferences.language}
+                onChange={(e) => setPreferences({ ...preferences, language: e.target.value })}
+                className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
+              >
+                <option value="English">English</option>
+                <option value="Igbo">Igbo</option>
+                <option value="Hausa">Hausa</option>
+                <option value="Yoruba">Yoruba</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Currency</label>
+              <select
+                value={preferences.currency}
+                onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
+                className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
+              >
+                <option value="NGN">Nigerian Naira (₦)</option>
+                <option value="USD">US Dollar ($)</option>
+                <option value="GBP">British Pound (£)</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Danger Zone */}
+        <div className="space-y-3">
+          <button
+            onClick={handleLogout}
+            className="w-full py-4 bg-white border border-[#c9a961]/20 rounded-2xl text-[#8b6947] font-semibold flex items-center justify-center gap-2 shadow-lg hover:bg-[#faf8f5] transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+            Sign Out
+          </button>
+          <button className="w-full py-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-600 font-semibold flex items-center justify-center gap-2 hover:bg-rose-100 transition-colors">
+            <Trash2 className="w-5 h-5" />
+            Delete Account
+          </button>
+        </div>
+      </div>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-[#c9a961]/20 px-4 py-2 z-30">
+        <div className="flex items-center justify-around max-w-md mx-auto">
+          {[
+            { icon: Home, label: 'Home', path: '/dashboard' },
+            { icon: Search, label: 'Search', path: '/search' },
+            { icon: Building2, label: 'Services', path: '/services/document-verification' },
+            { icon: Heart, label: 'Portfolio', path: '/portfolio' },
+            { icon: User, label: 'Profile', path: '/settings' },
+          ].map((item) => (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className="flex flex-col items-center py-1"
+            >
+              <div
+                className={`p-2 rounded-xl transition-all ${
+                  isActive(item.path) ? 'bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d]' : ''
+                }`}
+              >
+                <item.icon className={`w-5 h-5 ${isActive(item.path) ? 'text-white' : 'text-[#8b6947]'}`} />
+              </div>
+              <span className={`text-[10px] font-medium ${isActive(item.path) ? 'text-[#0f3d5c]' : 'text-[#8b6947]'}`}>
+                {item.label}
+              </span>
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
-}
+};
+
+export default UserSettings;

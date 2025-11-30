@@ -1,353 +1,668 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, MapPin, Shield, CheckCircle, Share2, Heart,
-  ChevronRight, ChevronLeft, MessageCircle, Home, Trees, 
-  Zap, Droplets, Car, X, Map, Lock, CreditCard, Info, 
-  ZoomIn, ZoomOut, Building2, Grid, List
+  ArrowLeft, 
+  MapPin, 
+  Ruler, 
+  Shield, 
+  CheckCircle2, 
+  Lock, 
+  XCircle,
+  Eye,
+  FileText,
+  Building2,
+  Sparkles,
+  ChevronRight,
+  Info,
+  CreditCard,
+  Home,
+  Search,
+  Heart,
+  User
 } from 'lucide-react';
-import { api } from '../services/api';
 import toast from 'react-hot-toast';
 
-interface Estate {
-  id: number; name: string; slug: string; location: string; description: string;
-  total_plots: number; available_plots: number; min_price: string; max_price: string;
-  image_url: string; status: string;
-}
+// Demo estates data
+const DEMO_ESTATES = [
+  {
+    id: 1,
+    name: 'Legacy Estate',
+    slug: 'legacy-estate',
+    location: 'Independence Layout, Enugu',
+    description: 'Premium residential estate with modern infrastructure and 24/7 security. Located in the heart of Independence Layout with easy access to major roads and amenities.',
+    total_plots: 150,
+    available_plots: 45,
+    min_price: 8500000,
+    max_price: 15000000,
+    plot_size: '500 sqm',
+    amenities: ['24/7 Security', 'Paved Roads', 'Drainage System', 'Street Lights', 'Green Areas'],
+    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800',
+  },
+  {
+    id: 2,
+    name: 'Royal Gardens',
+    slug: 'royal-gardens',
+    location: 'Trans-Ekulu, Enugu',
+    description: 'Serene garden estate with beautiful landscaping and family-friendly environment. Perfect for those seeking tranquility within the city.',
+    total_plots: 200,
+    available_plots: 78,
+    min_price: 6500000,
+    max_price: 12000000,
+    plot_size: '450 sqm',
+    amenities: ['Gated Community', 'Central Park', 'Playground', 'Water Supply', 'Power Supply'],
+    image: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800',
+  },
+  {
+    id: 3,
+    name: 'Diamond Heights',
+    slug: 'diamond-heights',
+    location: 'New Haven, Enugu',
+    description: 'Exclusive hilltop estate offering panoramic views of Enugu city. Premium plots for discerning investors.',
+    total_plots: 100,
+    available_plots: 32,
+    min_price: 12000000,
+    max_price: 25000000,
+    plot_size: '600 sqm',
+    amenities: ['Hilltop Location', 'Private Roads', 'Club House', 'Tennis Court', 'Swimming Pool'],
+    image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800',
+  },
+  {
+    id: 4,
+    name: 'Green Valley Estate',
+    slug: 'green-valley-estate',
+    location: 'Abakpa Nike, Enugu',
+    description: 'Affordable housing estate with modern amenities. Ideal for first-time buyers and young families.',
+    total_plots: 300,
+    available_plots: 156,
+    min_price: 4500000,
+    max_price: 8000000,
+    plot_size: '400 sqm',
+    amenities: ['Affordable Pricing', 'Flexible Payment', 'Good Roads', 'Schools Nearby', 'Markets Nearby'],
+    image: 'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=800',
+  },
+  {
+    id: 5,
+    name: 'Centenary City',
+    slug: 'centenary-city',
+    location: 'Enugu East, Enugu',
+    description: 'Mixed-use development with residential and commercial plots. Strategic location for business and living.',
+    total_plots: 500,
+    available_plots: 234,
+    min_price: 5000000,
+    max_price: 20000000,
+    plot_size: '350-1000 sqm',
+    amenities: ['Commercial Zones', 'Residential Zones', 'Shopping Mall', 'Hotels', 'Office Spaces'],
+    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800',
+  },
+  {
+    id: 6,
+    name: 'Paradise Gardens',
+    slug: 'paradise-gardens',
+    location: 'GRA, Enugu',
+    description: 'Ultra-luxury estate in the prestigious Government Reserved Area. The pinnacle of refined living in Enugu.',
+    total_plots: 80,
+    available_plots: 18,
+    min_price: 25000000,
+    max_price: 50000000,
+    plot_size: '800 sqm',
+    amenities: ['Ultra Luxury', 'Private Security', 'Helipad Access', 'Golf Course', 'Spa & Wellness'],
+    image: 'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=800',
+  },
+];
 
-interface Plot {
-  id: number; plot_number: string; size_sqm: number; price: number;
-  status: 'available' | 'sold' | 'reserved' | 'commercial'; plot_type: string;
-}
-
-const SEARCH_FEE = 30000;
-const EXTRA_PLOTS = 70;
-
-export default function EstateDetails() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { slug } = useParams();
+// Generate demo plots for an estate
+const generateDemoPlots = (estateId: number, totalPlots: number, availablePlots: number, minPrice: number, maxPrice: number) => {
+  const plots = [];
+  const soldCount = totalPlots - availablePlots;
+  const reservedCount = Math.floor(availablePlots * 0.2);
   
-  const [estate, setEstate] = useState<Estate | null>(null);
-  const [plots, setPlots] = useState<Plot[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [liked, setLiked] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'plots' | 'amenities'>('overview');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'sold' | 'reserved' | 'commercial'>('all');
-  const [selectedPlot, setSelectedPlot] = useState<Plot | null>(null);
-  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const [showSearchFeeModal, setShowSearchFeeModal] = useState(false);
-  const [searchFeePaid, setSearchFeePaid] = useState(false);
-  const [hoveredPlot, setHoveredPlot] = useState<Plot | null>(null);
-  const [mapZoom, setMapZoom] = useState(1);
-  const plotsPerPage = 12;
+  for (let i = 1; i <= totalPlots; i++) {
+    let status: 'available' | 'sold' | 'reserved';
+    if (i <= soldCount) {
+      status = 'sold';
+    } else if (i <= soldCount + reservedCount) {
+      status = 'reserved';
+    } else {
+      status = 'available';
+    }
+    
+    const priceRange = maxPrice - minPrice;
+    const price = minPrice + Math.floor(Math.random() * priceRange);
+    
+    plots.push({
+      id: i,
+      plot_number: `PLT-${String(i).padStart(3, '0')}`,
+      size: ['400 sqm', '450 sqm', '500 sqm', '600 sqm'][Math.floor(Math.random() * 4)],
+      price: price,
+      status: status,
+      location: `Block ${String.fromCharCode(65 + Math.floor((i - 1) / 20))}, Plot ${((i - 1) % 20) + 1}`,
+    });
+  }
+  
+  return plots;
+};
+
+const EstateDetails = () => {
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  
+  const [estate, setEstate] = useState<typeof DEMO_ESTATES[0] | null>(null);
+  const [plots, setPlots] = useState<ReturnType<typeof generateDemoPlots>>([]);
+  const [activeTab, setActiveTab] = useState<'overview' | 'plots'>('overview');
+  const [selectedPlot, setSelectedPlot] = useState<typeof plots[0] | null>(null);
+  const [hasSearchAccess, setHasSearchAccess] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'reserved' | 'sold'>('all');
+
+  useEffect(() => {
+    // Find estate by slug
+    const foundEstate = DEMO_ESTATES.find(e => e.slug === slug);
+    if (foundEstate) {
+      setEstate(foundEstate);
+      const generatedPlots = generateDemoPlots(
+        foundEstate.id,
+        foundEstate.total_plots,
+        foundEstate.available_plots,
+        foundEstate.min_price,
+        foundEstate.max_price
+      );
+      setPlots(generatedPlots);
+      checkPaymentStatus(foundEstate.name);
+    }
+  }, [slug]);
 
   const checkPaymentStatus = (estateName: string) => {
     try {
       const paidEstates = JSON.parse(localStorage.getItem('paidSearchFees') || '[]');
-      return paidEstates.includes(estateName);
-    } catch (e) { return false; }
-  };
-
-  useEffect(() => { fetchEstate(); }, [slug]);
-
-  useEffect(() => {
-    if (location.state?.paymentSuccess && estate) {
-      const isPaid = checkPaymentStatus(estate.name);
-      if (isPaid) { setSearchFeePaid(true); setActiveTab('plots'); toast.success('Access granted!'); }
-      window.history.replaceState({}, document.title);
+      const isPaid = paidEstates.includes(estateName);
+      setHasSearchAccess(isPaid);
+    } catch {
+      setHasSearchAccess(false);
     }
-  }, [location.state, estate]);
-
-  const fetchEstate = async () => {
-    try {
-      setLoading(true);
-      const allEstates = await api.getEstates();
-      if (Array.isArray(allEstates) && allEstates.length > 0) {
-        const foundEstate = allEstates.find((e: Estate) => e.slug === slug || e.id.toString() === slug || e.name.toLowerCase().replace(/\s+/g, '-') === slug);
-        if (foundEstate) {
-          const enhancedEstate = { ...foundEstate, total_plots: foundEstate.total_plots + EXTRA_PLOTS, available_plots: foundEstate.available_plots + Math.floor(EXTRA_PLOTS * 0.7) };
-          setEstate(enhancedEstate);
-          generatePlots(enhancedEstate);
-          const isPaid = checkPaymentStatus(foundEstate.name);
-          setSearchFeePaid(isPaid);
-          if (location.state?.paymentSuccess && isPaid) setActiveTab('plots');
-        } else toast.error('Estate not found');
-      }
-    } catch (error) { toast.error('Failed to load'); }
-    finally { setLoading(false); }
   };
 
-  const generatePlots = (estateData: Estate) => {
-    const generatedPlots: Plot[] = [];
-    const plotTypes = ['Residential', 'Commercial', 'Corner Piece', 'Standard'];
-    const sizes = [250, 300, 350, 400, 450, 500];
-    for (let i = 0; i < estateData.total_plots; i++) {
-      const plotNum = i + 1;
-      const isAvailable = plotNum <= estateData.available_plots;
-      const basePrice = parseInt(estateData.min_price);
-      const maxPrice = parseInt(estateData.max_price);
-      const randomPrice = basePrice + Math.random() * (maxPrice - basePrice);
-      let status: 'available' | 'sold' | 'reserved' | 'commercial' = 'sold';
-      if (isAvailable) {
-        const rand = Math.random();
-        if (rand < 0.65) status = 'available';
-        else if (rand < 0.80) status = 'reserved';
-        else status = 'commercial';
-      }
-      generatedPlots.push({ id: plotNum, plot_number: `${estateData.name.substring(0, 2).toUpperCase()}-${String(plotNum).padStart(3, '0')}`, size_sqm: sizes[Math.floor(Math.random() * sizes.length)], price: Math.round(randomPrice / 100000) * 100000, status, plot_type: status === 'commercial' ? 'Commercial' : plotTypes[Math.floor(Math.random() * 3)] });
+  const handleTabClick = (tab: 'overview' | 'plots') => {
+    if (tab === 'plots' && !hasSearchAccess) {
+      setShowPaymentModal(true);
+    } else {
+      setActiveTab(tab);
     }
-    setPlots(generatedPlots);
   };
 
-  const formatCurrency = (amount: number | string) => { const num = typeof amount === 'string' ? parseInt(amount) : amount; return '₦' + num.toLocaleString(); };
-  const filteredPlots = plots.filter(plot => filterStatus === 'all' || plot.status === filterStatus);
-  const paginatedPlots = filteredPlots.slice((currentPage - 1) * plotsPerPage, currentPage * plotsPerPage);
-  const totalPages = Math.ceil(filteredPlots.length / plotsPerPage);
+  const handlePaySearchFee = () => {
+    if (!estate) return;
+    
+    setIsProcessing(true);
+    
+    // Simulate payment processing
+    setTimeout(() => {
+      try {
+        const paidEstates = JSON.parse(localStorage.getItem('paidSearchFees') || '[]');
+        if (!paidEstates.includes(estate.name)) {
+          paidEstates.push(estate.name);
+          localStorage.setItem('paidSearchFees', JSON.stringify(paidEstates));
+        }
+        setHasSearchAccess(true);
+        setShowPaymentModal(false);
+        setActiveTab('plots');
+        toast.success('Search fee payment successful!');
+      } catch (error) {
+        toast.error('Payment failed. Please try again.');
+      }
+      setIsProcessing(false);
+    }, 2000);
+  };
 
-  const amenities = [
-    { icon: Zap, label: 'Electricity', desc: '24/7 Power' },
-    { icon: Droplets, label: 'Water', desc: 'Borehole' },
-    { icon: Car, label: 'Roads', desc: 'Tarred' },
-    { icon: Shield, label: 'Security', desc: 'Gated' },
-    { icon: Trees, label: 'Green Areas', desc: 'Parks' },
-    { icon: Home, label: 'Drainage', desc: 'Proper' },
-  ];
+  const handlePlotSelect = (plot: typeof plots[0]) => {
+    if (plot.status === 'available') {
+      setSelectedPlot(plot);
+    } else if (plot.status === 'sold') {
+      toast.error('This plot has already been sold');
+    } else {
+      toast.error('This plot is currently reserved');
+    }
+  };
 
-  const handleWhatsApp = () => { window.open(`https://wa.me/2348012345678?text=${encodeURIComponent(`Hi, I'm interested in ${estate?.name}`)}`, '_blank'); };
-  const handleShare = () => { navigator.clipboard.writeText(window.location.href); toast.success('Link copied!'); };
-  const handleTabClick = (tabId: string) => { if (tabId === 'plots' && !searchFeePaid) setShowSearchFeeModal(true); else setActiveTab(tabId as any); };
-  const handlePaySearchFee = () => { if (!estate) return; setShowSearchFeeModal(false); navigate('/payment', { state: { type: 'Plot Search Fee', amount: SEARCH_FEE, description: `Survey Plan Access - ${estate.name}`, estateName: estate.name, reference: 'PSF' + Date.now(), returnUrl: `/estate/${slug}` } }); };
-  const handleSelectPlot = (plot: Plot) => { if (plot.status === 'available' || plot.status === 'commercial') { setSelectedPlot(plot); setShowPurchaseModal(true); } else if (plot.status === 'reserved') toast('Reserved', { icon: '⏳' }); else toast.error('Sold'); };
-  const handleProceedToPayment = () => { if (selectedPlot && estate) { setShowPurchaseModal(false); navigate('/land-payment-summary', { state: { plotDetails: { plot_number: selectedPlot.plot_number, size: selectedPlot.size_sqm, type: selectedPlot.plot_type, estate: estate.name, location: estate.location, price: selectedPlot.price } } }); } };
+  const handleProceedToPayment = () => {
+    if (selectedPlot && estate) {
+      navigate('/land-payment-summary', {
+        state: {
+          plot: selectedPlot,
+          estate: estate,
+        }
+      });
+    }
+  };
 
-  const getPlotColor = (status: string) => { switch (status) { case 'available': return '#4ECDC4'; case 'sold': return '#ef4444'; case 'reserved': return '#f97316'; case 'commercial': return '#f59e0b'; default: return '#778DA9'; } };
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
 
-  if (loading) return <div className="min-h-screen bg-[#0D1B2A] flex items-center justify-center"><div className="w-10 h-10 border-3 border-[#1B263B] border-t-[#4ECDC4] rounded-full animate-spin"></div></div>;
-  if (!estate) return <div className="min-h-screen bg-[#0D1B2A] flex flex-col items-center justify-center p-4"><Home className="w-12 h-12 text-[#778DA9] mb-3" /><h2 className="text-white font-bold mb-3">Estate Not Found</h2><button onClick={() => navigate('/dashboard')} className="px-5 py-2.5 bg-[#4ECDC4] text-white rounded-xl text-sm font-semibold">Dashboard</button></div>;
+  const filteredPlots = plots.filter(plot => {
+    if (filterStatus === 'all') return true;
+    return plot.status === filterStatus;
+  });
 
-  const availableCount = plots.filter(p => p.status === 'available').length;
-  const soldCount = plots.filter(p => p.status === 'sold').length;
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'available':
+        return 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-300';
+      case 'reserved':
+        return 'bg-gradient-to-br from-amber-400 to-amber-600 border-amber-300';
+      case 'sold':
+        return 'bg-gradient-to-br from-rose-400 to-rose-600 border-rose-300';
+      default:
+        return 'bg-gray-200 border-gray-300';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'available':
+        return <CheckCircle2 className="w-3 h-3 text-white" />;
+      case 'reserved':
+        return <Lock className="w-3 h-3 text-white" />;
+      case 'sold':
+        return <XCircle className="w-3 h-3 text-white" />;
+      default:
+        return null;
+    }
+  };
+
+  if (!estate) {
+    return (
+      <div className="min-h-screen bg-[#faf8f5] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#c9a961] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[#8b6947]">Loading estate details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#0D1B2A] pb-24">
-      {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-20 p-4 flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 bg-[#0D1B2A]/60 backdrop-blur-sm rounded-xl flex items-center justify-center"><ArrowLeft className="w-5 h-5 text-white" /></button>
-        <div className="flex items-center gap-2">
-          <button onClick={handleShare} className="w-10 h-10 bg-[#0D1B2A]/60 backdrop-blur-sm rounded-xl flex items-center justify-center"><Share2 className="w-5 h-5 text-white" /></button>
-          <button onClick={() => setLiked(!liked)} className="w-10 h-10 bg-[#0D1B2A]/60 backdrop-blur-sm rounded-xl flex items-center justify-center"><Heart className={`w-5 h-5 ${liked ? 'fill-red-500 text-red-500' : 'text-white'}`} /></button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#faf8f5] pb-24">
+      {/* Hero Header */}
+      <div className="relative h-64 overflow-hidden">
+        <img
+          src={estate.image}
+          alt={estate.name}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+        
+        {/* Back Button */}
+        <button
+          onClick={() => navigate(-1)}
+          className="absolute top-4 left-4 p-2 bg-white/20 backdrop-blur-xl rounded-xl border border-white/30 hover:bg-white/30 transition-colors z-10"
+        >
+          <ArrowLeft className="w-5 h-5 text-white" />
+        </button>
 
-      {/* Hero Image */}
-      <div className="relative h-64">
-        <img src={estate.image_url} alt={estate.name} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0D1B2A] via-[#0D1B2A]/50 to-transparent"></div>
-        <div className="absolute bottom-4 left-4 right-4">
-          <div className="flex gap-2 mb-2">
-            <span className="px-2 py-1 bg-[#4ECDC4] rounded-lg text-white text-[10px] font-bold">{availableCount} Available</span>
-            <span className="px-2 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-white text-[10px] font-bold flex items-center gap-1"><Shield className="w-3 h-3" /> Verified</span>
+        {/* Estate Info Overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="px-3 py-1 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-full text-white text-xs font-semibold">
+              Premium Estate
+            </span>
+            <span className="px-3 py-1 bg-white/20 backdrop-blur rounded-full text-white text-xs">
+              {estate.available_plots} plots available
+            </span>
           </div>
-          <h1 className="text-white font-bold text-xl">{estate.name}</h1>
-          <div className="flex items-center gap-1 text-[#778DA9] text-xs"><MapPin className="w-3 h-3" />{estate.location}</div>
+          <h1 className="font-serif text-white text-2xl font-bold mb-1">{estate.name}</h1>
+          <p className="text-white/80 text-sm flex items-center gap-1">
+            <MapPin className="w-4 h-4" />
+            {estate.location}
+          </p>
         </div>
       </div>
 
-      <main className="px-4 -mt-2 relative z-10">
-        {/* Price Card */}
-        <div className="bg-[#1B263B] rounded-2xl p-4 mb-4 border border-[#778DA9]/10">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-[#778DA9] text-[10px]">Price Range</p>
-              <p className="text-[#4ECDC4] font-bold text-xl">{formatCurrency(estate.min_price)} - {formatCurrency(estate.max_price)}</p>
-            </div>
-            <button onClick={() => searchFeePaid ? setActiveTab('plots') : setShowSearchFeeModal(true)} className="px-4 py-2.5 bg-gradient-to-r from-[#4ECDC4] to-[#44A08D] rounded-xl text-white text-xs font-semibold flex items-center gap-1">
-              {searchFeePaid ? <><Map className="w-4 h-4" /> View Plots</> : <><Lock className="w-4 h-4" /> Unlock</>}
-            </button>
-          </div>
-          <div className="flex gap-4 text-xs">
-            <span className="text-[#778DA9]">{estate.total_plots} Total</span>
-            <span className="text-[#4ECDC4] font-semibold">{availableCount} Available</span>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="bg-[#1B263B] rounded-2xl overflow-hidden border border-[#778DA9]/10">
-          <div className="flex border-b border-[#778DA9]/10">
-            {[{ id: 'overview', label: 'Overview' }, { id: 'plots', label: 'PLOTS', locked: !searchFeePaid }, { id: 'amenities', label: 'Amenities' }].map((tab) => (
-              <button key={tab.id} onClick={() => handleTabClick(tab.id)} className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-1 ${activeTab === tab.id ? 'text-[#4ECDC4] border-b-2 border-[#4ECDC4] bg-[#4ECDC4]/5' : 'text-[#778DA9]'}`}>
-                {tab.locked && <Lock className="w-3 h-3 text-amber-400" />}{tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="p-4">
-            {/* OVERVIEW TAB */}
+      {/* Tab Navigation */}
+      <div className="sticky top-0 bg-white/95 backdrop-blur-xl border-b border-[#c9a961]/20 z-20">
+        <div className="flex">
+          <button
+            onClick={() => handleTabClick('overview')}
+            className={`flex-1 py-4 text-sm font-semibold transition-all relative ${
+              activeTab === 'overview'
+                ? 'text-[#0f3d5c]'
+                : 'text-[#8b6947]'
+            }`}
+          >
+            <span className="flex items-center justify-center gap-2">
+              <Info className="w-4 h-4" />
+              Overview
+            </span>
             {activeTab === 'overview' && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-white font-bold text-sm mb-2">About</h3>
-                  <p className="text-[#778DA9] text-xs leading-relaxed">{estate.description}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-[#0D1B2A] rounded-xl p-3 text-center"><Building2 className="w-5 h-5 mx-auto mb-1 text-[#4ECDC4]" /><p className="text-white font-bold">{estate.total_plots}</p><p className="text-[#778DA9] text-[10px]">Total</p></div>
-                  <div className="bg-[#0D1B2A] rounded-xl p-3 text-center"><CheckCircle className="w-5 h-5 mx-auto mb-1 text-[#4ECDC4]" /><p className="text-white font-bold">{availableCount}</p><p className="text-[#778DA9] text-[10px]">Available</p></div>
-                </div>
-                {!searchFeePaid && (
-                  <div className="bg-gradient-to-r from-[#4ECDC4]/20 to-[#44A08D]/20 rounded-xl p-4 border border-[#4ECDC4]/30">
-                    <div className="flex items-center gap-2 mb-2"><Lock className="w-4 h-4 text-[#4ECDC4]" /><span className="text-[#4ECDC4] font-medium text-xs">Premium Access</span></div>
-                    <p className="text-white text-sm font-bold mb-1">View All {estate.total_plots} Plots</p>
-                    <p className="text-[#778DA9] text-xs mb-3">Pay {formatCurrency(SEARCH_FEE)} to unlock</p>
-                    <button onClick={() => setShowSearchFeeModal(true)} className="w-full py-2.5 bg-gradient-to-r from-[#4ECDC4] to-[#44A08D] rounded-xl text-white text-xs font-bold flex items-center justify-center gap-1"><CreditCard className="w-4 h-4" /> Pay Now</button>
-                  </div>
-                )}
-              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d]" />
             )}
-
-            {/* PLOTS TAB */}
+          </button>
+          <button
+            onClick={() => handleTabClick('plots')}
+            className={`flex-1 py-4 text-sm font-semibold transition-all relative ${
+              activeTab === 'plots'
+                ? 'text-[#0f3d5c]'
+                : 'text-[#8b6947]'
+            }`}
+          >
+            <span className="flex items-center justify-center gap-2">
+              <Eye className="w-4 h-4" />
+              View Plots
+              {!hasSearchAccess && (
+                <Lock className="w-3 h-3 text-[#c9a961]" />
+              )}
+            </span>
             {activeTab === 'plots' && (
-              <>
-                {!searchFeePaid ? (
-                  <div className="text-center py-10">
-                    <div className="w-16 h-16 bg-[#4ECDC4]/10 rounded-full flex items-center justify-center mx-auto mb-4"><Lock className="w-8 h-8 text-[#4ECDC4]" /></div>
-                    <h3 className="text-white font-bold mb-2">Plots Locked</h3>
-                    <p className="text-[#778DA9] text-xs mb-4">Pay {formatCurrency(SEARCH_FEE)} to view</p>
-                    <button onClick={() => setShowSearchFeeModal(true)} className="px-6 py-2.5 bg-gradient-to-r from-[#4ECDC4] to-[#44A08D] rounded-xl text-white text-xs font-bold">Unlock Now</button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {/* Legend */}
-                    <div className="flex flex-wrap gap-2 text-[10px]">
-                      <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-[#4ECDC4]"></div><span className="text-[#778DA9]">Available</span></div>
-                      <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-500"></div><span className="text-[#778DA9]">Sold</span></div>
-                      <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-orange-500"></div><span className="text-[#778DA9]">Reserved</span></div>
-                      <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-amber-500"></div><span className="text-[#778DA9]">Commercial</span></div>
-                    </div>
-
-                    {/* Filters */}
-                    <div className="flex gap-1.5 overflow-x-auto pb-1">
-                      {['all', 'available', 'sold', 'reserved', 'commercial'].map((s) => (
-                        <button key={s} onClick={() => { setFilterStatus(s as any); setCurrentPage(1); }} className={`px-3 py-1.5 rounded-lg text-[10px] font-medium whitespace-nowrap ${filterStatus === s ? 'bg-[#4ECDC4] text-white' : 'bg-[#0D1B2A] text-[#778DA9]'}`}>
-                          {s.charAt(0).toUpperCase() + s.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Plots Grid */}
-                    <div className="grid grid-cols-2 gap-2">
-                      {paginatedPlots.map((plot) => (
-                        <div key={plot.id} onClick={() => handleSelectPlot(plot)} className={`bg-[#0D1B2A] border rounded-xl p-3 cursor-pointer transition-all ${plot.status === 'available' ? 'border-[#4ECDC4]/50 hover:border-[#4ECDC4]' : plot.status === 'sold' ? 'border-red-500/30 opacity-60' : 'border-[#778DA9]/20'}`}>
-                          <div className="flex justify-between items-start mb-1">
-                            <span className="text-white font-bold text-xs">{plot.plot_number}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${plot.status === 'available' ? 'bg-[#4ECDC4]/20 text-[#4ECDC4]' : plot.status === 'sold' ? 'bg-red-500/20 text-red-400' : plot.status === 'reserved' ? 'bg-orange-500/20 text-orange-400' : 'bg-amber-500/20 text-amber-400'}`}>{plot.status}</span>
-                          </div>
-                          <p className="text-[#778DA9] text-[10px]">{plot.size_sqm} sqm</p>
-                          <p className="text-[#4ECDC4] font-bold text-sm mt-1">{formatCurrency(plot.price)}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                      <div className="flex items-center justify-center gap-3 pt-2">
-                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 bg-[#0D1B2A] rounded-lg disabled:opacity-30"><ChevronLeft className="w-4 h-4 text-[#778DA9]" /></button>
-                        <span className="text-[#778DA9] text-xs">{currentPage}/{totalPages}</span>
-                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 bg-[#0D1B2A] rounded-lg disabled:opacity-30"><ChevronRight className="w-4 h-4 text-[#778DA9]" /></button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d]" />
             )}
-
-            {/* AMENITIES TAB */}
-            {activeTab === 'amenities' && (
-              <div className="grid grid-cols-2 gap-2">
-                {amenities.map((a, i) => (
-                  <div key={i} className="flex items-center gap-2 p-3 bg-[#0D1B2A] rounded-xl">
-                    <div className="w-8 h-8 bg-[#4ECDC4]/10 rounded-lg flex items-center justify-center"><a.icon className="w-4 h-4 text-[#4ECDC4]" /></div>
-                    <div><p className="text-white font-medium text-xs">{a.label}</p><p className="text-[#778DA9] text-[10px]">{a.desc}</p></div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
-
-      {/* Bottom CTA */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#1B263B]/95 backdrop-blur-xl border-t border-[#778DA9]/10 p-4 z-30">
-        <div className="flex gap-3">
-          <button onClick={handleWhatsApp} className="flex-1 py-3 bg-[#0D1B2A] border border-[#778DA9]/20 rounded-xl text-white text-xs font-semibold flex items-center justify-center gap-1.5"><MessageCircle className="w-4 h-4" /> Enquire</button>
-          <button onClick={() => searchFeePaid ? setActiveTab('plots') : setShowSearchFeeModal(true)} className="flex-1 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#44A08D] rounded-xl text-white text-xs font-semibold flex items-center justify-center gap-1.5">
-            {searchFeePaid ? <><Map className="w-4 h-4" /> View Plots</> : <><Lock className="w-4 h-4" /> Unlock</>}
           </button>
         </div>
       </div>
 
-      {/* Search Fee Modal */}
-      {showSearchFeeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#1B263B] w-full max-w-sm rounded-3xl overflow-hidden border border-[#778DA9]/10">
-            <div className="bg-gradient-to-r from-[#4ECDC4] to-[#44A08D] p-4 flex justify-between items-center">
-              <h3 className="text-white font-bold">Unlock Plots</h3>
-              <button onClick={() => setShowSearchFeeModal(false)} className="text-white/80"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-5">
-              <div className="text-center mb-5">
-                <div className="w-16 h-16 bg-[#4ECDC4]/10 rounded-full flex items-center justify-center mx-auto mb-3"><Map className="w-8 h-8 text-[#4ECDC4]" /></div>
-                <h4 className="text-white font-bold mb-1">Access {estate.total_plots} Plots</h4>
-                <p className="text-[#778DA9] text-xs">View survey plan & all plots</p>
+      {/* Content */}
+      <div className="px-4 py-6 space-y-6">
+        {activeTab === 'overview' ? (
+          <>
+            {/* Price Range Card */}
+            <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-5 border border-[#c9a961]/20 shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-serif text-[#0a2540] font-bold">Price Range</h2>
+                <Sparkles className="w-5 h-5 text-[#c9a961]" />
               </div>
-              <div className="bg-[#0D1B2A] rounded-xl p-4 mb-5">
-                <div className="flex justify-between items-center mb-3 pb-3 border-b border-[#778DA9]/10"><span className="text-[#778DA9] text-xs">One-time Fee</span><span className="text-[#4ECDC4] font-bold text-xl">{formatCurrency(SEARCH_FEE)}</span></div>
-                <div className="space-y-2 text-xs">
-                  {['View survey plan', 'See all plots', 'Check availability', 'Select & purchase'].map((item, i) => (
-                    <p key={i} className="flex items-center gap-2 text-[#778DA9]"><CheckCircle className="w-3.5 h-3.5 text-[#4ECDC4]" />{item}</p>
-                  ))}
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] bg-clip-text text-transparent">
+                  {formatPrice(estate.min_price)}
+                </span>
+                <span className="text-[#8b6947]">—</span>
+                <span className="text-2xl font-bold bg-gradient-to-r from-[#c9a961] to-[#8b6947] bg-clip-text text-transparent">
+                  {formatPrice(estate.max_price)}
+                </span>
+              </div>
+              <p className="text-[#8b6947] text-sm mt-2">Per plot • {estate.plot_size}</p>
+            </div>
+
+            {/* Description */}
+            <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-5 border border-[#c9a961]/20 shadow-xl">
+              <h2 className="font-serif text-[#0a2540] font-bold mb-3">About This Estate</h2>
+              <p className="text-[#8b6947] text-sm leading-relaxed">{estate.description}</p>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl text-center">
+                <div className="w-10 h-10 mx-auto mb-2 bg-gradient-to-br from-[#0f3d5c]/10 to-[#0d6e5d]/10 rounded-xl flex items-center justify-center">
+                  <Ruler className="w-5 h-5 text-[#0d6e5d]" />
+                </div>
+                <p className="text-lg font-bold text-[#0a2540]">{estate.plot_size}</p>
+                <p className="text-xs text-[#8b6947]">Plot Size</p>
+              </div>
+              <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl text-center">
+                <div className="w-10 h-10 mx-auto mb-2 bg-gradient-to-br from-[#c9a961]/10 to-[#8b6947]/10 rounded-xl flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-[#c9a961]" />
+                </div>
+                <p className="text-lg font-bold text-[#0a2540]">{estate.total_plots}</p>
+                <p className="text-xs text-[#8b6947]">Total Plots</p>
+              </div>
+              <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl text-center">
+                <div className="w-10 h-10 mx-auto mb-2 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-xl flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                </div>
+                <p className="text-lg font-bold text-emerald-600">{estate.available_plots}</p>
+                <p className="text-xs text-[#8b6947]">Available</p>
+              </div>
+            </div>
+
+            {/* Amenities */}
+            <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-5 border border-[#c9a961]/20 shadow-xl">
+              <h2 className="font-serif text-[#0a2540] font-bold mb-4">Estate Amenities</h2>
+              <div className="flex flex-wrap gap-2">
+                {estate.amenities.map((amenity, index) => (
+                  <span
+                    key={index}
+                    className="px-4 py-2 bg-gradient-to-br from-[#faf8f5] to-white rounded-xl text-sm text-[#8b6947] border border-[#c9a961]/20 flex items-center gap-2"
+                  >
+                    <Shield className="w-4 h-4 text-[#0d6e5d]" />
+                    {amenity}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* CTA Button */}
+            <button
+              onClick={() => handleTabClick('plots')}
+              className="w-full py-4 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-2xl text-white font-semibold shadow-xl shadow-[#c9a961]/30 flex items-center justify-center gap-2 hover:shadow-2xl transition-all"
+            >
+              <Eye className="w-5 h-5" />
+              View Available Plots
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </>
+        ) : (
+          <>
+            {/* Filter Buttons */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {(['all', 'available', 'reserved', 'sold'] as const).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilterStatus(status)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+                    filterStatus === status
+                      ? 'bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] text-white shadow-lg'
+                      : 'bg-white border border-[#c9a961]/20 text-[#8b6947]'
+                  }`}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  {status !== 'all' && (
+                    <span className="ml-1 text-xs opacity-70">
+                      ({plots.filter(p => p.status === status).length})
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-4 py-2">
+              <div className="flex items-center gap-1">
+                <div className="w-4 h-4 rounded bg-gradient-to-br from-emerald-400 to-emerald-600" />
+                <span className="text-xs text-[#8b6947]">Available</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-4 h-4 rounded bg-gradient-to-br from-amber-400 to-amber-600" />
+                <span className="text-xs text-[#8b6947]">Reserved</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-4 h-4 rounded bg-gradient-to-br from-rose-400 to-rose-600" />
+                <span className="text-xs text-[#8b6947]">Sold</span>
+              </div>
+            </div>
+
+            {/* Plot Grid */}
+            <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl">
+              <div className="grid grid-cols-5 gap-2">
+                {filteredPlots.map((plot) => (
+                  <button
+                    key={plot.id}
+                    onClick={() => handlePlotSelect(plot)}
+                    className={`aspect-square rounded-lg ${getStatusColor(plot.status)} border-2 flex items-center justify-center transition-all hover:scale-105 ${
+                      selectedPlot?.id === plot.id ? 'ring-2 ring-[#0f3d5c] ring-offset-2' : ''
+                    } ${plot.status !== 'available' ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
+                  >
+                    {getStatusIcon(plot.status)}
+                  </button>
+                ))}
+              </div>
+              
+              {filteredPlots.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-[#8b6947]">No plots match the selected filter</p>
+                </div>
+              )}
+            </div>
+
+            {/* Selected Plot Details */}
+            {selectedPlot && (
+              <div className="bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] rounded-2xl p-5 text-white shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-serif text-xl font-bold">{selectedPlot.plot_number}</h3>
+                    <p className="text-white/70 text-sm">{selectedPlot.location}</p>
+                  </div>
+                  <div className="px-3 py-1 bg-white/20 backdrop-blur rounded-full">
+                    <span className="text-sm font-semibold">{selectedPlot.size}</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-white/80">Plot Price</span>
+                  <span className="text-2xl font-bold">{formatPrice(selectedPlot.price)}</span>
+                </div>
+                
+                <button
+                  onClick={handleProceedToPayment}
+                  className="w-full py-4 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-xl font-semibold shadow-lg shadow-[#c9a961]/30 flex items-center justify-center gap-2"
+                >
+                  <CreditCard className="w-5 h-5" />
+                  Proceed to Payment
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Search Fee Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md overflow-hidden animate-slide-up">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] p-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#c9a961]/20 rounded-full blur-2xl" />
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <XCircle className="w-5 h-5 text-white" />
+              </button>
+              <div className="relative">
+                <div className="w-16 h-16 bg-white/15 backdrop-blur rounded-2xl flex items-center justify-center mb-4 border border-white/20">
+                  <FileText className="w-8 h-8 text-[#c9a961]" />
+                </div>
+                <h2 className="font-serif text-white text-xl font-bold">Search Fee Required</h2>
+                <p className="text-white/70 text-sm mt-1">Unlock detailed plot information</p>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              <div className="bg-[#faf8f5] rounded-2xl p-4 border border-[#c9a961]/20">
+                <p className="text-sm text-[#8b6947] mb-3">
+                  To view and select plots in <span className="font-semibold text-[#0a2540]">{estate.name}</span>, a one-time search fee is required.
+                </p>
+                <div className="flex items-center justify-between py-3 border-t border-[#c9a961]/20">
+                  <span className="text-[#8b6947]">Search Fee</span>
+                  <span className="text-xl font-bold text-[#0a2540]">₦30,000</span>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <button onClick={() => setShowSearchFeeModal(false)} className="flex-1 py-3 bg-[#0D1B2A] rounded-xl text-[#778DA9] text-xs font-semibold">Cancel</button>
-                <button onClick={handlePaySearchFee} className="flex-1 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#44A08D] rounded-xl text-white text-xs font-bold flex items-center justify-center gap-1"><CreditCard className="w-4 h-4" /> Pay Now</button>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-[#8b6947]">
+                  <CheckCircle2 className="w-4 h-4 text-[#0d6e5d]" />
+                  <span>View all plot details and pricing</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#8b6947]">
+                  <CheckCircle2 className="w-4 h-4 text-[#0d6e5d]" />
+                  <span>Select and reserve your preferred plot</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#8b6947]">
+                  <CheckCircle2 className="w-4 h-4 text-[#0d6e5d]" />
+                  <span>Access valid for 30 days</span>
+                </div>
               </div>
+
+              <button
+                onClick={handlePaySearchFee}
+                disabled={isProcessing}
+                className="w-full py-4 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-xl text-white font-semibold shadow-xl shadow-[#c9a961]/30 flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {isProcessing ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-5 h-5" />
+                    Pay ₦30,000
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="w-full py-3 text-[#8b6947] font-medium"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Purchase Modal */}
-      {showPurchaseModal && selectedPlot && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-          <div className="bg-[#1B263B] w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl border border-[#778DA9]/10">
-            <div className="bg-gradient-to-r from-[#4ECDC4] to-[#44A08D] p-4 flex justify-between items-center sm:rounded-t-3xl">
-              <h3 className="text-white font-bold">Confirm Selection</h3>
-              <button onClick={() => setShowPurchaseModal(false)} className="text-white/80"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-5">
-              <div className="bg-[#0D1B2A] rounded-xl p-4 mb-5">
-                <div className="flex items-center gap-3 mb-3 pb-3 border-b border-[#778DA9]/10">
-                  <div className="w-12 h-12 bg-[#4ECDC4]/10 rounded-xl flex items-center justify-center"><Home className="w-6 h-6 text-[#4ECDC4]" /></div>
-                  <div><p className="text-white font-bold">{selectedPlot.plot_number}</p><p className="text-[#778DA9] text-xs">{estate.name}</p></div>
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-[#c9a961]/20 px-4 py-2 z-30">
+        <div className="flex items-center justify-around max-w-md mx-auto">
+          {[
+            { icon: Home, label: 'Home', path: '/dashboard' },
+            { icon: Search, label: 'Search', path: '/search' },
+            { icon: Building2, label: 'Services', path: '/services/document-verification' },
+            { icon: Heart, label: 'Portfolio', path: '/portfolio' },
+            { icon: User, label: 'Profile', path: '/settings' },
+          ].map((item) => {
+            const isActive = false; // Estate details is not in nav
+            return (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className="flex flex-col items-center py-1"
+              >
+                <div className={`p-2 rounded-xl transition-all ${isActive ? 'bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d]' : ''}`}>
+                  <item.icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-[#8b6947]'}`} />
                 </div>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between"><span className="text-[#778DA9]">Type</span><span className="text-white">{selectedPlot.plot_type}</span></div>
-                  <div className="flex justify-between"><span className="text-[#778DA9]">Size</span><span className="text-white">{selectedPlot.size_sqm} sqm</span></div>
-                  <div className="flex justify-between"><span className="text-[#778DA9]">Location</span><span className="text-white">{estate.location}</span></div>
-                  <div className="flex justify-between pt-2 mt-2 border-t border-[#778DA9]/10"><span className="text-[#778DA9] font-semibold">Price</span><span className="text-[#4ECDC4] font-bold text-lg">{formatCurrency(selectedPlot.price)}</span></div>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <button onClick={() => setShowPurchaseModal(false)} className="flex-1 py-3 bg-[#0D1B2A] rounded-xl text-[#778DA9] text-xs font-semibold">Cancel</button>
-                <button onClick={handleProceedToPayment} className="flex-1 py-3 bg-gradient-to-r from-[#4ECDC4] to-[#44A08D] rounded-xl text-white text-xs font-bold">Proceed</button>
-              </div>
-            </div>
-          </div>
+                <span className={`text-[10px] font-medium ${isActive ? 'text-[#0f3d5c]' : 'text-[#8b6947]'}`}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
-      )}
+      </nav>
+
+      {/* CSS for slide-up animation */}
+      <style>{`
+        @keyframes slide-up {
+          from {
+            opacity: 0;
+            transform: translateY(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
-}
+};
+
+export default EstateDetails;
