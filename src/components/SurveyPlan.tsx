@@ -6,14 +6,10 @@ import {
   FileText,
   CheckCircle2,
   Clock,
-  AlertCircle,
   ChevronRight,
-  Upload,
-  CreditCard,
   MapPin,
   Calendar,
   Download,
-  Sparkles,
   Compass,
   Ruler,
   Phone,
@@ -23,7 +19,14 @@ import {
   Building2,
   Heart,
   User,
-  Eye
+  Eye,
+  Layers,
+  Navigation,
+  Target,
+  Grid3X3,
+  Maximize2,
+  ZoomIn,
+  LocateFixed
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -31,30 +34,30 @@ interface SurveyRequest {
   id: string;
   propertyAddress: string;
   requestDate: string;
-  status: 'pending' | 'surveying' | 'completed' | 'rejected';
+  status: 'pending' | 'surveying' | 'completed';
   trackingNumber: string;
   surveyorName?: string;
-  completionDate?: string;
+  plotSize?: string;
+  coordinates?: { lat: string; lng: string };
 }
 
 const SurveyPlan = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'request' | 'status'>('request');
+  const [activeTab, setActiveTab] = useState<'request' | 'plans'>('request');
+  const [selectedPlan, setSelectedPlan] = useState<SurveyRequest | null>(null);
   const [formStep, setFormStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     propertyAddress: '',
     plotSize: '',
-    landUse: '',
+    landUse: 'residential',
     ownerName: '',
     ownerPhone: '',
-    ownerEmail: '',
-    additionalInfo: '',
   });
 
-  const [surveyRequests] = useState<SurveyRequest[]>([
+  const [surveyPlans] = useState<SurveyRequest[]>([
     {
       id: '1',
       propertyAddress: 'Plot 15, Legacy Estate, Independence Layout',
@@ -62,91 +65,37 @@ const SurveyPlan = () => {
       status: 'completed',
       trackingNumber: 'SP-2024-001234',
       surveyorName: 'Surv. Emmanuel Okoro',
-      completionDate: '2024-01-25',
+      plotSize: '648.5 sqm',
+      coordinates: { lat: '6.4541° N', lng: '7.5134° E' },
     },
     {
       id: '2',
-      propertyAddress: 'Block C, Plot 22, Royal Gardens',
+      propertyAddress: 'Block C, Plot 22, Royal Gardens, Trans-Ekulu',
       requestDate: '2024-01-20',
       status: 'surveying',
       trackingNumber: 'SP-2024-001567',
       surveyorName: 'Surv. Chioma Nwosu',
+      plotSize: '500 sqm',
+      coordinates: { lat: '6.4623° N', lng: '7.5089° E' },
     },
     {
       id: '3',
-      propertyAddress: 'Plot 8, Diamond Heights',
+      propertyAddress: 'Plot 8, Diamond Heights, New Haven',
       requestDate: '2024-01-28',
       status: 'pending',
       trackingNumber: 'SP-2024-001890',
+      plotSize: '750 sqm',
     },
   ]);
 
-  const landUseOptions = [
-    { id: 'residential', name: 'Residential' },
-    { id: 'commercial', name: 'Commercial' },
-    { id: 'industrial', name: 'Industrial' },
-    { id: 'agricultural', name: 'Agricultural' },
-    { id: 'mixed', name: 'Mixed Use' },
-  ];
-
-  const fees = [
-    { name: 'Survey Fee', amount: 150000 },
-    { name: 'Processing Fee', amount: 25000 },
-    { name: 'Pillar Installation', amount: 50000 },
-    { name: 'Documentation Fee', amount: 15000 },
-  ];
-
-  const totalFee = fees.reduce((sum, fee) => sum + fee.amount, 0);
-
-  const formatPrice = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const getStatusColor = (status: string) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        return { bg: 'bg-emerald-500', text: 'text-emerald-500', light: 'bg-emerald-50', label: 'Completed' };
       case 'surveying':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'pending':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'rejected':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
+        return { bg: 'bg-blue-500', text: 'text-blue-500', light: 'bg-blue-50', label: 'In Progress' };
       default:
-        return 'bg-gray-50 text-gray-700 border-gray-200';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return CheckCircle2;
-      case 'surveying':
-        return Compass;
-      case 'pending':
-        return Clock;
-      case 'rejected':
-        return AlertCircle;
-      default:
-        return Clock;
-    }
-  };
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleNextStep = () => {
-    if (formStep < 2) {
-      setFormStep(formStep + 1);
-    } else {
-      handleSubmit();
+        return { bg: 'bg-amber-500', text: 'text-amber-500', light: 'bg-amber-50', label: 'Pending' };
     }
   };
 
@@ -154,366 +103,404 @@ const SurveyPlan = () => {
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
-      toast.success('Survey request submitted successfully!');
-      setActiveTab('status');
+      toast.success('Survey request submitted!');
+      setActiveTab('plans');
       setFormStep(1);
-      setFormData({
-        propertyAddress: '',
-        plotSize: '',
-        landUse: '',
-        ownerName: '',
-        ownerPhone: '',
-        ownerEmail: '',
-        additionalInfo: '',
-      });
-    }, 2000);
+    }, 1500);
   };
 
   const isActive = (path: string) => location.pathname === path;
 
-  return (
-    <div className="min-h-screen bg-[#faf8f5] pb-24">
-      {/* Header */}
-      <header className="bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] pt-4 pb-20 px-4 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-[#c9a961]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-6">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-white" />
-            </button>
+  // Beautiful Survey Plan Visualization Component
+  const SurveyPlanVisualization = ({ plan }: { plan: SurveyRequest }) => (
+    <div className="bg-white rounded-2xl border border-[#c9a961]/20 shadow-xl overflow-hidden">
+      {/* Plan Header */}
+      <div className="bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+              <Map className="w-4 h-4 text-white" />
+            </div>
             <div>
-              <h1 className="font-serif text-white text-xl font-bold">Survey Plan</h1>
-              <p className="text-white/70 text-xs">Request official land survey</p>
+              <p className="text-white font-bold text-sm">{plan.trackingNumber}</p>
+              <p className="text-white/60 text-[10px]">Survey Plan</p>
+            </div>
+          </div>
+          <div className={`px-2 py-1 rounded-full text-[10px] font-medium ${getStatusConfig(plan.status).light} ${getStatusConfig(plan.status).text}`}>
+            {getStatusConfig(plan.status).label}
+          </div>
+        </div>
+      </div>
+
+      {/* Beautiful Map/Survey Visualization */}
+      <div className="relative bg-[#f0f4f3] p-4">
+        {/* Grid Background */}
+        <div className="absolute inset-0 opacity-30">
+          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#0d6e5d" strokeWidth="0.5" opacity="0.3"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </svg>
+        </div>
+
+        {/* Survey Plot Visualization */}
+        <div className="relative z-10">
+          {/* Compass */}
+          <div className="absolute top-2 right-2 w-12 h-12">
+            <div className="relative w-full h-full">
+              <div className="absolute inset-0 bg-white rounded-full shadow-lg border-2 border-[#0d6e5d]/20" />
+              <div className="absolute inset-2 flex items-center justify-center">
+                <Navigation className="w-5 h-5 text-[#0d6e5d] -rotate-45" />
+              </div>
+              <span className="absolute -top-1 left-1/2 -translate-x-1/2 text-[8px] font-bold text-[#0d6e5d]">N</span>
             </div>
           </div>
 
-          {/* Tab Toggle */}
+          {/* Scale Bar */}
+          <div className="absolute bottom-2 left-2 flex items-center gap-1">
+            <div className="flex">
+              <div className="w-6 h-1.5 bg-[#0a2540]" />
+              <div className="w-6 h-1.5 bg-white border border-[#0a2540]" />
+              <div className="w-6 h-1.5 bg-[#0a2540]" />
+            </div>
+            <span className="text-[8px] text-[#0a2540] font-medium">30m</span>
+          </div>
+
+          {/* Plot Shape */}
+          <div className="mx-auto my-4 relative" style={{ width: '200px', height: '160px' }}>
+            {/* Main Plot */}
+            <svg viewBox="0 0 200 160" className="w-full h-full">
+              {/* Plot Fill */}
+              <polygon
+                points="20,20 180,20 180,140 20,140"
+                fill="#0d6e5d"
+                fillOpacity="0.15"
+                stroke="#0d6e5d"
+                strokeWidth="2"
+              />
+              
+              {/* Corner Beacons */}
+              <circle cx="20" cy="20" r="6" fill="#c9a961" stroke="#8b6947" strokeWidth="2" />
+              <circle cx="180" cy="20" r="6" fill="#c9a961" stroke="#8b6947" strokeWidth="2" />
+              <circle cx="180" cy="140" r="6" fill="#c9a961" stroke="#8b6947" strokeWidth="2" />
+              <circle cx="20" cy="140" r="6" fill="#c9a961" stroke="#8b6947" strokeWidth="2" />
+
+              {/* Beacon Labels */}
+              <text x="20" y="10" textAnchor="middle" className="text-[8px] fill-[#0a2540] font-bold">B1</text>
+              <text x="180" y="10" textAnchor="middle" className="text-[8px] fill-[#0a2540] font-bold">B2</text>
+              <text x="180" y="155" textAnchor="middle" className="text-[8px] fill-[#0a2540] font-bold">B3</text>
+              <text x="20" y="155" textAnchor="middle" className="text-[8px] fill-[#0a2540] font-bold">B4</text>
+
+              {/* Dimensions */}
+              <text x="100" y="14" textAnchor="middle" className="text-[9px] fill-[#0f3d5c] font-semibold">32.4m</text>
+              <text x="100" y="152" textAnchor="middle" className="text-[9px] fill-[#0f3d5c] font-semibold">32.4m</text>
+              <text x="8" y="85" textAnchor="middle" className="text-[9px] fill-[#0f3d5c] font-semibold" transform="rotate(-90, 8, 85)">20.0m</text>
+              <text x="192" y="85" textAnchor="middle" className="text-[9px] fill-[#0f3d5c] font-semibold" transform="rotate(90, 192, 85)">20.0m</text>
+
+              {/* Center Mark */}
+              <circle cx="100" cy="80" r="3" fill="none" stroke="#c9a961" strokeWidth="1" />
+              <line x1="95" y1="80" x2="105" y2="80" stroke="#c9a961" strokeWidth="1" />
+              <line x1="100" y1="75" x2="100" y2="85" stroke="#c9a961" strokeWidth="1" />
+
+              {/* Area Text */}
+              <text x="100" y="95" textAnchor="middle" className="text-[10px] fill-[#0d6e5d] font-bold">{plan.plotSize}</text>
+            </svg>
+
+            {/* Direction Labels */}
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[8px] text-[#8b6947] font-medium">NORTH</div>
+            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] text-[#8b6947] font-medium">SOUTH</div>
+            <div className="absolute top-1/2 -left-8 -translate-y-1/2 text-[8px] text-[#8b6947] font-medium rotate-[-90deg]">WEST</div>
+            <div className="absolute top-1/2 -right-8 -translate-y-1/2 text-[8px] text-[#8b6947] font-medium rotate-90">EAST</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Plan Details */}
+      <div className="p-4 space-y-3">
+        {/* Coordinates */}
+        {plan.coordinates && (
+          <div className="flex items-center gap-3 p-3 bg-[#faf8f5] rounded-xl">
+            <div className="w-8 h-8 bg-[#0d6e5d]/10 rounded-lg flex items-center justify-center">
+              <LocateFixed className="w-4 h-4 text-[#0d6e5d]" />
+            </div>
+            <div>
+              <p className="text-[10px] text-[#8b6947]">GPS Coordinates</p>
+              <p className="text-xs font-medium text-[#0a2540]">{plan.coordinates.lat}, {plan.coordinates.lng}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Property Info */}
+        <div className="flex items-start gap-3 p-3 bg-[#faf8f5] rounded-xl">
+          <div className="w-8 h-8 bg-[#c9a961]/10 rounded-lg flex items-center justify-center">
+            <MapPin className="w-4 h-4 text-[#c9a961]" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[10px] text-[#8b6947]">Property Address</p>
+            <p className="text-xs font-medium text-[#0a2540]">{plan.propertyAddress}</p>
+          </div>
+        </div>
+
+        {/* Surveyor */}
+        {plan.surveyorName && (
+          <div className="flex items-center gap-3 p-3 bg-[#faf8f5] rounded-xl">
+            <div className="w-8 h-8 bg-[#0f3d5c]/10 rounded-lg flex items-center justify-center">
+              <Compass className="w-4 h-4 text-[#0f3d5c]" />
+            </div>
+            <div>
+              <p className="text-[10px] text-[#8b6947]">Licensed Surveyor</p>
+              <p className="text-xs font-medium text-[#0a2540]">{plan.surveyorName}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        {plan.status === 'completed' && (
+          <div className="flex gap-2 pt-2">
+            <button className="flex-1 py-3 bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] rounded-xl text-white text-xs font-medium flex items-center justify-center gap-2">
+              <Download className="w-4 h-4" />
+              Download PDF
+            </button>
+            <button className="flex-1 py-3 bg-[#faf8f5] border border-[#c9a961]/20 rounded-xl text-[#8b6947] text-xs font-medium flex items-center justify-center gap-2">
+              <Maximize2 className="w-4 h-4" />
+              Full View
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#faf8f5] pb-24">
+      {/* Header */}
+      <header className="bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] pt-4 pb-6 px-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[#c9a961]/10 rounded-full blur-3xl" />
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-4">
+            <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <div>
+              <h1 className="text-white text-lg font-bold">Survey Plans</h1>
+              <p className="text-white/60 text-xs">Request & view survey plans</p>
+            </div>
+          </div>
+
+          {/* Tabs */}
           <div className="flex bg-white/10 backdrop-blur rounded-xl p-1">
             <button
-              onClick={() => setActiveTab('request')}
-              className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                activeTab === 'request'
-                  ? 'bg-white text-[#0f3d5c] shadow-lg'
-                  : 'text-white/80 hover:text-white'
+              onClick={() => { setActiveTab('request'); setSelectedPlan(null); }}
+              className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'request' ? 'bg-white text-[#0f3d5c]' : 'text-white/70'
               }`}
             >
-              <Map className="w-4 h-4" />
+              <FileText className="w-3.5 h-3.5" />
               New Request
             </button>
             <button
-              onClick={() => setActiveTab('status')}
-              className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                activeTab === 'status'
-                  ? 'bg-white text-[#0f3d5c] shadow-lg'
-                  : 'text-white/80 hover:text-white'
+              onClick={() => setActiveTab('plans')}
+              className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'plans' ? 'bg-white text-[#0f3d5c]' : 'text-white/70'
               }`}
             >
-              <FileText className="w-4 h-4" />
-              My Requests
+              <Layers className="w-3.5 h-3.5" />
+              My Plans
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="px-4 -mt-8 relative z-10 space-y-6">
+      {/* Content */}
+      <div className="px-4 py-4 space-y-4">
         {activeTab === 'request' ? (
           <>
-            {/* Progress */}
-            <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl">
-              <div className="flex items-center justify-center gap-4">
-                {[1, 2].map((step) => (
-                  <div key={step} className="flex items-center">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
-                        formStep >= step
-                          ? 'bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] text-white shadow-lg'
-                          : 'bg-[#faf8f5] text-[#8b6947] border border-[#c9a961]/30'
-                      }`}
-                    >
-                      {formStep > step ? <CheckCircle2 className="w-5 h-5" /> : step}
-                    </div>
-                    {step < 2 && (
-                      <div className={`w-16 h-0.5 mx-2 rounded-full ${formStep > step ? 'bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d]' : 'bg-[#c9a961]/20'}`} />
-                    )}
+            {/* Request Form */}
+            <div className="bg-white rounded-2xl p-4 border border-[#c9a961]/10 shadow-sm space-y-4">
+              <h3 className="text-[#0a2540] font-bold text-sm flex items-center gap-2">
+                <Target className="w-4 h-4 text-[#c9a961]" />
+                Property Details
+              </h3>
+              
+              <div>
+                <label className="block text-[10px] text-[#8b6947] mb-1 font-medium">Property Address</label>
+                <input
+                  type="text"
+                  value={formData.propertyAddress}
+                  onChange={(e) => setFormData({ ...formData, propertyAddress: e.target.value })}
+                  placeholder="Enter full property address"
+                  className="w-full px-3 py-2.5 bg-[#faf8f5] border border-[#c9a961]/20 rounded-xl text-sm text-[#0a2540] placeholder-[#8b6947]/50 focus:outline-none focus:border-[#0d6e5d]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-[#8b6947] mb-1 font-medium">Plot Size (sqm)</label>
+                  <input
+                    type="text"
+                    value={formData.plotSize}
+                    onChange={(e) => setFormData({ ...formData, plotSize: e.target.value })}
+                    placeholder="e.g., 500"
+                    className="w-full px-3 py-2.5 bg-[#faf8f5] border border-[#c9a961]/20 rounded-xl text-sm text-[#0a2540] placeholder-[#8b6947]/50 focus:outline-none focus:border-[#0d6e5d]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-[#8b6947] mb-1 font-medium">Land Use</label>
+                  <select
+                    value={formData.landUse}
+                    onChange={(e) => setFormData({ ...formData, landUse: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-[#faf8f5] border border-[#c9a961]/20 rounded-xl text-sm text-[#0a2540] focus:outline-none focus:border-[#0d6e5d]"
+                  >
+                    <option value="residential">Residential</option>
+                    <option value="commercial">Commercial</option>
+                    <option value="industrial">Industrial</option>
+                    <option value="agricultural">Agricultural</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-[#8b6947] mb-1 font-medium">Owner's Name</label>
+                <input
+                  type="text"
+                  value={formData.ownerName}
+                  onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
+                  placeholder="Full legal name"
+                  className="w-full px-3 py-2.5 bg-[#faf8f5] border border-[#c9a961]/20 rounded-xl text-sm text-[#0a2540] placeholder-[#8b6947]/50 focus:outline-none focus:border-[#0d6e5d]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-[#8b6947] mb-1 font-medium">Phone Number</label>
+                <input
+                  type="tel"
+                  value={formData.ownerPhone}
+                  onChange={(e) => setFormData({ ...formData, ownerPhone: e.target.value })}
+                  placeholder="+234..."
+                  className="w-full px-3 py-2.5 bg-[#faf8f5] border border-[#c9a961]/20 rounded-xl text-sm text-[#0a2540] placeholder-[#8b6947]/50 focus:outline-none focus:border-[#0d6e5d]"
+                />
+              </div>
+            </div>
+
+            {/* Fee Summary */}
+            <div className="bg-white rounded-2xl p-4 border border-[#c9a961]/10 shadow-sm">
+              <h3 className="text-[#0a2540] font-bold text-sm mb-3 flex items-center gap-2">
+                <Ruler className="w-4 h-4 text-[#c9a961]" />
+                Survey Fees
+              </h3>
+              <div className="space-y-2">
+                {[
+                  { name: 'Survey Fee', amount: '₦150,000' },
+                  { name: 'Processing', amount: '₦25,000' },
+                  { name: 'Pillar Installation', amount: '₦50,000' },
+                  { name: 'Documentation', amount: '₦15,000' },
+                ].map((fee, i) => (
+                  <div key={i} className="flex justify-between text-xs">
+                    <span className="text-[#8b6947]">{fee.name}</span>
+                    <span className="text-[#0a2540] font-medium">{fee.amount}</span>
                   </div>
                 ))}
-              </div>
-              <div className="flex justify-around mt-2 text-xs text-[#8b6947]">
-                <span>Property Details</span>
-                <span>Review & Pay</span>
+                <div className="flex justify-between pt-2 border-t border-[#c9a961]/10">
+                  <span className="text-[#0a2540] font-bold text-sm">Total</span>
+                  <span className="text-[#0d6e5d] font-bold">₦240,000</span>
+                </div>
               </div>
             </div>
 
-            {formStep === 1 && (
-              <>
-                {/* Property Info */}
-                <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-5 border border-[#c9a961]/20 shadow-xl space-y-4">
-                  <h3 className="font-serif text-[#0a2540] font-bold flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-[#c9a961]" />
-                    Property Information
-                  </h3>
-                  <div>
-                    <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Property Address</label>
-                    <input
-                      type="text"
-                      name="propertyAddress"
-                      value={formData.propertyAddress}
-                      onChange={handleInputChange}
-                      placeholder="Enter full property address"
-                      className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm placeholder-[#8b6947]/50 focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Plot Size</label>
-                      <input
-                        type="text"
-                        name="plotSize"
-                        value={formData.plotSize}
-                        onChange={handleInputChange}
-                        placeholder="e.g., 500 sqm"
-                        className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm placeholder-[#8b6947]/50 focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Land Use</label>
-                      <select
-                        name="landUse"
-                        value={formData.landUse}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
-                      >
-                        <option value="">Select type</option>
-                        {landUseOptions.map((opt) => (
-                          <option key={opt.id} value={opt.id}>{opt.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+            {/* Timeline */}
+            <div className="bg-gradient-to-r from-[#0f3d5c]/5 to-[#0d6e5d]/5 rounded-2xl p-4 border border-[#0d6e5d]/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#0d6e5d]/10 rounded-xl flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-[#0d6e5d]" />
                 </div>
-
-                {/* Owner Info */}
-                <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-5 border border-[#c9a961]/20 shadow-xl space-y-4">
-                  <h3 className="font-serif text-[#0a2540] font-bold flex items-center gap-2">
-                    <User className="w-4 h-4 text-[#c9a961]" />
-                    Owner Information
-                  </h3>
-                  <div>
-                    <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Full Name</label>
-                    <input
-                      type="text"
-                      name="ownerName"
-                      value={formData.ownerName}
-                      onChange={handleInputChange}
-                      placeholder="Enter your full name"
-                      className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm placeholder-[#8b6947]/50 focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Phone</label>
-                      <input
-                        type="tel"
-                        name="ownerPhone"
-                        value={formData.ownerPhone}
-                        onChange={handleInputChange}
-                        placeholder="+234..."
-                        className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm placeholder-[#8b6947]/50 focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-[#8b6947] mb-1.5 font-medium">Email</label>
-                      <input
-                        type="email"
-                        name="ownerEmail"
-                        value={formData.ownerEmail}
-                        onChange={handleInputChange}
-                        placeholder="email@example.com"
-                        className="w-full px-4 py-3 bg-[#faf8f5] border border-[#c9a961]/30 rounded-xl text-[#0a2540] text-sm placeholder-[#8b6947]/50 focus:outline-none focus:border-[#0d6e5d] focus:ring-2 focus:ring-[#0d6e5d]/20"
-                      />
-                    </div>
-                  </div>
+                <div>
+                  <p className="text-[#0a2540] font-medium text-sm">7-14 Working Days</p>
+                  <p className="text-[#8b6947] text-xs">Surveyor assigned within 48 hours</p>
                 </div>
+              </div>
+            </div>
 
-                {/* Upload Section */}
-                <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-5 border border-[#c9a961]/20 shadow-xl">
-                  <h3 className="font-serif text-[#0a2540] font-bold mb-3 flex items-center gap-2">
-                    <Upload className="w-4 h-4 text-[#c9a961]" />
-                    Supporting Documents
-                  </h3>
-                  <button
-                    onClick={() => navigate('/services/document-upload')}
-                    className="w-full py-4 border-2 border-dashed border-[#c9a961]/30 rounded-xl text-[#8b6947] font-medium flex items-center justify-center gap-2 hover:border-[#c9a961] hover:bg-[#c9a961]/5 transition-all"
-                  >
-                    <Upload className="w-5 h-5" />
-                    Upload Documents
-                  </button>
-                </div>
-              </>
-            )}
-
-            {formStep === 2 && (
-              <>
-                {/* Summary */}
-                <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-5 border border-[#c9a961]/20 shadow-xl">
-                  <h3 className="font-serif text-[#0a2540] font-bold mb-4 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#c9a961]" />
-                    Request Summary
-                  </h3>
-                  <div className="space-y-3">
-                    {[
-                      { label: 'Property', value: formData.propertyAddress || 'Not specified' },
-                      { label: 'Plot Size', value: formData.plotSize || 'Not specified' },
-                      { label: 'Land Use', value: formData.landUse || 'Not specified' },
-                      { label: 'Owner', value: formData.ownerName || 'Not specified' },
-                    ].map((item, i) => (
-                      <div key={i} className="flex justify-between py-2 border-b border-[#c9a961]/10 last:border-0">
-                        <span className="text-sm text-[#8b6947]">{item.label}</span>
-                        <span className="text-sm font-medium text-[#0a2540] capitalize">{item.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Fee Breakdown */}
-                <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-5 border border-[#c9a961]/20 shadow-xl">
-                  <h3 className="font-serif text-[#0a2540] font-bold mb-4 flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-[#c9a961]" />
-                    Fee Breakdown
-                  </h3>
-                  <div className="space-y-3">
-                    {fees.map((fee, i) => (
-                      <div key={i} className="flex justify-between py-2 border-b border-[#c9a961]/10 last:border-0">
-                        <span className="text-sm text-[#8b6947]">{fee.name}</span>
-                        <span className="text-sm font-medium text-[#0a2540]">{formatPrice(fee.amount)}</span>
-                      </div>
-                    ))}
-                    <div className="flex justify-between pt-3 border-t-2 border-[#c9a961]/20">
-                      <span className="font-bold text-[#0a2540]">Total</span>
-                      <span className="text-xl font-bold bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] bg-clip-text text-transparent">
-                        {formatPrice(totalFee)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Timeline Info */}
-                <div className="bg-gradient-to-r from-[#c9a961]/10 to-[#8b6947]/5 rounded-2xl p-4 border border-[#c9a961]/20 flex gap-3">
-                  <Ruler className="w-5 h-5 text-[#c9a961] flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-[#0a2540]">Estimated Timeline</p>
-                    <p className="text-xs text-[#8b6947]">
-                      Survey work typically takes 7-14 working days. A licensed surveyor will be assigned within 48 hours.
-                    </p>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Navigation */}
-            <div className="flex gap-3">
-              {formStep > 1 && (
-                <button
-                  onClick={() => setFormStep(formStep - 1)}
-                  className="flex-1 py-4 bg-white border border-[#c9a961]/20 rounded-2xl text-[#8b6947] font-semibold shadow-lg"
-                >
-                  Previous
-                </button>
+            {/* Submit Button */}
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="w-full py-3.5 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-70"
+            >
+              {isSubmitting ? (
+                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Processing...</>
+              ) : (
+                <>Submit Request <ChevronRight className="w-4 h-4" /></>
               )}
-              <button
-                onClick={handleNextStep}
-                disabled={isSubmitting}
-                className="flex-1 py-4 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-2xl text-white font-semibold shadow-xl shadow-[#c9a961]/30 flex items-center justify-center gap-2 disabled:opacity-70"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    {formStep === 2 ? 'Submit & Pay' : 'Continue'}
-                    <ChevronRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-            </div>
+            </button>
           </>
         ) : (
           <>
-            {/* Requests List */}
-            <div className="space-y-4">
-              {surveyRequests.map((request) => {
-                const StatusIcon = getStatusIcon(request.status);
-                return (
-                  <div
-                    key={request.id}
-                    className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#0f3d5c]/10 to-[#0d6e5d]/10 rounded-xl flex items-center justify-center">
-                          <Map className="w-5 h-5 text-[#0d6e5d]" />
+            {/* Survey Plans List */}
+            {selectedPlan ? (
+              <>
+                <button
+                  onClick={() => setSelectedPlan(null)}
+                  className="flex items-center gap-2 text-[#0d6e5d] text-sm font-medium mb-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to Plans
+                </button>
+                <SurveyPlanVisualization plan={selectedPlan} />
+              </>
+            ) : (
+              <div className="space-y-3">
+                {surveyPlans.map((plan) => {
+                  const statusConfig = getStatusConfig(plan.status);
+                  return (
+                    <button
+                      key={plan.id}
+                      onClick={() => setSelectedPlan(plan)}
+                      className="w-full bg-white rounded-2xl p-4 border border-[#c9a961]/10 shadow-sm text-left"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-10 h-10 bg-gradient-to-br from-[#0f3d5c]/10 to-[#0d6e5d]/10 rounded-xl flex items-center justify-center">
+                            <Map className="w-5 h-5 text-[#0d6e5d]" />
+                          </div>
+                          <div>
+                            <p className="text-[#0a2540] font-bold text-xs">{plan.trackingNumber}</p>
+                            <p className="text-[#8b6947] text-[10px]">{plan.plotSize}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs text-[#8b6947]">Tracking</p>
-                          <p className="text-sm font-bold text-[#0a2540]">{request.trackingNumber}</p>
+                        <div className={`px-2 py-1 rounded-full text-[10px] font-medium ${statusConfig.light} ${statusConfig.text}`}>
+                          {statusConfig.label}
                         </div>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1 ${getStatusColor(request.status)}`}>
-                        <StatusIcon className="w-3 h-3" />
-                        {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                      </span>
-                    </div>
-                    <div className="bg-[#faf8f5] rounded-xl p-3 mb-3">
-                      <p className="text-xs text-[#8b6947] mb-1">Property</p>
-                      <p className="text-sm text-[#0a2540]">{request.propertyAddress}</p>
-                    </div>
-                    {request.surveyorName && (
-                      <div className="flex items-center gap-2 mb-3 text-sm text-[#8b6947]">
-                        <Compass className="w-4 h-4 text-[#0d6e5d]" />
-                        <span>{request.surveyorName}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1 text-xs text-[#8b6947]">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(request.requestDate).toLocaleDateString()}
-                      </div>
-                      {request.status === 'completed' && (
-                        <div className="flex gap-2">
-                          <button className="flex items-center gap-1 px-3 py-1.5 bg-[#faf8f5] border border-[#c9a961]/20 rounded-lg text-[#8b6947] text-xs font-medium">
-                            <Eye className="w-3 h-3" />
-                            View
-                          </button>
-                          <button className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] rounded-lg text-white text-xs font-medium">
-                            <Download className="w-3 h-3" />
-                            Download
-                          </button>
+                      <p className="text-[#8b6947] text-xs mb-2 line-clamp-1">{plan.propertyAddress}</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1 text-[10px] text-[#8b6947]">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(plan.requestDate).toLocaleDateString()}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                        <div className="flex items-center gap-1 text-[#0d6e5d] text-xs font-medium">
+                          View Plan <ChevronRight className="w-3 h-3" />
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Contact */}
-            <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl">
-              <h3 className="font-serif text-[#0a2540] font-bold mb-3">Survey Department</h3>
+            <div className="bg-white rounded-2xl p-4 border border-[#c9a961]/10 shadow-sm">
+              <h3 className="text-[#0a2540] font-bold text-sm mb-3">Survey Office</h3>
               <div className="space-y-2">
-                <a href="tel:+2348012345678" className="flex items-center gap-3 p-3 bg-[#faf8f5] rounded-xl hover:bg-[#c9a961]/10 transition-colors">
-                  <Phone className="w-5 h-5 text-[#0d6e5d]" />
-                  <span className="text-sm text-[#8b6947]">+234 801 234 5678</span>
+                <a href="tel:+2348012345678" className="flex items-center gap-3 p-2.5 bg-[#faf8f5] rounded-xl">
+                  <Phone className="w-4 h-4 text-[#0d6e5d]" />
+                  <span className="text-xs text-[#8b6947]">+234 801 234 5678</span>
                 </a>
-                <a href="mailto:survey@enugu.gov.ng" className="flex items-center gap-3 p-3 bg-[#faf8f5] rounded-xl hover:bg-[#c9a961]/10 transition-colors">
-                  <Mail className="w-5 h-5 text-[#0d6e5d]" />
-                  <span className="text-sm text-[#8b6947]">survey@enugu.gov.ng</span>
+                <a href="mailto:survey@enugu.gov.ng" className="flex items-center gap-3 p-2.5 bg-[#faf8f5] rounded-xl">
+                  <Mail className="w-4 h-4 text-[#0d6e5d]" />
+                  <span className="text-xs text-[#8b6947]">survey@enugu.gov.ng</span>
                 </a>
               </div>
             </div>
@@ -522,7 +509,7 @@ const SurveyPlan = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-[#c9a961]/20 px-4 py-2 z-30">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#c9a961]/10 px-4 py-2 z-30">
         <div className="flex items-center justify-around max-w-md mx-auto">
           {[
             { icon: Home, label: 'Home', path: '/dashboard' },
@@ -531,12 +518,8 @@ const SurveyPlan = () => {
             { icon: Heart, label: 'Portfolio', path: '/portfolio' },
             { icon: User, label: 'Profile', path: '/settings' },
           ].map((item) => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className="flex flex-col items-center py-1"
-            >
-              <div className={`p-2 rounded-xl transition-all ${isActive(item.path) ? 'bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d]' : ''}`}>
+            <button key={item.path} onClick={() => navigate(item.path)} className="flex flex-col items-center py-1">
+              <div className={`p-2 rounded-xl ${isActive(item.path) ? 'bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d]' : ''}`}>
                 <item.icon className={`w-5 h-5 ${isActive(item.path) ? 'text-white' : 'text-[#8b6947]'}`} />
               </div>
               <span className={`text-[10px] font-medium ${isActive(item.path) ? 'text-[#0f3d5c]' : 'text-[#8b6947]'}`}>{item.label}</span>
