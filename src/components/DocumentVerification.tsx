@@ -1,430 +1,267 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  ArrowLeft,
-  Search,
-  FileText,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  AlertCircle,
-  ChevronRight,
-  Shield,
-  Upload,
-  Download,
-  Eye,
-  Sparkles,
-  Building2,
-  MapPin,
-  Calendar,
-  User,
-  Hash,
-  Home,
-  Heart
-} from 'lucide-react';
+import { ArrowLeft, Search, Shield, CheckCircle, XCircle, AlertCircle, FileText, Clock, Crown, Home, Building2, Heart, User, Upload, QrCode } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface VerificationResult {
-  documentId: string;
+  status: 'valid' | 'invalid' | 'pending';
   documentType: string;
-  ownerName: string;
-  propertyAddress: string;
+  owner: string;
+  location: string;
   issueDate: string;
-  expiryDate: string;
-  status: 'valid' | 'invalid' | 'expired' | 'pending';
+  expiryDate?: string;
   registrationNumber: string;
 }
 
 const DocumentVerification = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResult, setSearchResult] = useState<VerificationResult | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [documentNumber, setDocumentNumber] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<VerificationResult | null>(null);
+  const [error, setError] = useState('');
 
-  // Demo verification results
-  const demoResults: Record<string, VerificationResult> = {
-    'COO-2024-001234': {
-      documentId: 'COO-2024-001234',
-      documentType: 'Certificate of Occupancy',
-      ownerName: 'James Okonkwo',
-      propertyAddress: 'Plot 15, Block A, Legacy Estate, Independence Layout, Enugu',
-      issueDate: '2024-01-15',
-      expiryDate: '2099-01-15',
-      status: 'valid',
-      registrationNumber: 'EN/IL/LE/015/2024',
-    },
-    'DOA-2023-005678': {
-      documentId: 'DOA-2023-005678',
-      documentType: 'Deed of Assignment',
-      ownerName: 'Chioma Eze',
-      propertyAddress: 'Plot 7, Royal Gardens, Trans-Ekulu, Enugu',
-      issueDate: '2023-06-20',
-      expiryDate: '2098-06-20',
-      status: 'valid',
-      registrationNumber: 'EN/TE/RG/007/2023',
-    },
-    'GC-2022-009999': {
-      documentId: 'GC-2022-009999',
-      documentType: "Governor's Consent",
-      ownerName: 'Emmanuel Nwankwo',
-      propertyAddress: 'Plot 32, Diamond Heights, New Haven, Enugu',
-      issueDate: '2022-03-10',
-      expiryDate: '2097-03-10',
-      status: 'expired',
-      registrationNumber: 'EN/NH/DH/032/2022',
-    },
-  };
-
-  const handleSearch = () => {
-    if (!searchQuery.trim()) {
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!documentNumber.trim()) {
       toast.error('Please enter a document number');
       return;
     }
 
-    setIsSearching(true);
-    setHasSearched(true);
+    setLoading(true);
+    setError('');
+    setResult(null);
 
     // Simulate API call
-    setTimeout(() => {
-      const result = demoResults[searchQuery.toUpperCase()];
-      setSearchResult(result || null);
-      setIsSearching(false);
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-      if (result) {
-        toast.success('Document found!');
-      } else {
-        toast.error('Document not found');
-      }
-    }, 1500);
+    // Demo verification results
+    const demoResults: Record<string, VerificationResult> = {
+      'COO-2024-001': {
+        status: 'valid',
+        documentType: 'Certificate of Occupancy',
+        owner: 'John Okonkwo Chukwuemeka',
+        location: 'Plot 15, Independence Layout, Enugu',
+        issueDate: '2024-01-15',
+        registrationNumber: 'EN/COO/2024/00156'
+      },
+      'GC-2023-045': {
+        status: 'valid',
+        documentType: "Governor's Consent",
+        owner: 'Mary Eze Adaeze',
+        location: 'Block A, Plot 7, Trans-Ekulu, Enugu',
+        issueDate: '2023-11-20',
+        registrationNumber: 'EN/GC/2023/00789'
+      },
+      'SP-2024-012': {
+        status: 'pending',
+        documentType: 'Survey Plan',
+        owner: 'Processing...',
+        location: 'New Haven Extension, Enugu',
+        issueDate: '2024-02-01',
+        registrationNumber: 'EN/SP/2024/PENDING'
+      },
+    };
+
+    const normalizedInput = documentNumber.toUpperCase().trim();
+    
+    if (demoResults[normalizedInput]) {
+      setResult(demoResults[normalizedInput]);
+    } else {
+      setError('Document not found. Please check the number and try again.');
+    }
+
+    setLoading(false);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusDisplay = (status: string) => {
     switch (status) {
       case 'valid':
-        return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+        return { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100', label: 'Verified & Valid' };
       case 'invalid':
-        return 'bg-rose-100 text-rose-700 border-rose-200';
-      case 'expired':
-        return 'bg-amber-100 text-amber-700 border-amber-200';
+        return { icon: XCircle, color: 'text-red-600', bg: 'bg-red-100', label: 'Invalid Document' };
       case 'pending':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
+        return { icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100', label: 'Pending Verification' };
       default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
+        return { icon: AlertCircle, color: 'text-gray-600', bg: 'bg-gray-100', label: 'Unknown' };
     }
   };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'valid':
-        return CheckCircle2;
-      case 'invalid':
-        return XCircle;
-      case 'expired':
-        return AlertCircle;
-      case 'pending':
-        return Clock;
-      default:
-        return AlertCircle;
-    }
-  };
-
-  const services = [
-    {
-      name: 'Document Upload',
-      description: 'Upload documents for verification',
-      icon: Upload,
-      path: '/services/document-upload',
-      color: 'from-[#0f3d5c] to-[#0d6e5d]',
-    },
-    {
-      name: "Governor's Consent",
-      description: 'Apply for land transfer approval',
-      icon: FileText,
-      path: '/services/governors-consent',
-      color: 'from-[#c9a961] to-[#8b6947]',
-    },
-    {
-      name: 'Ground Rent',
-      description: 'Pay your annual ground rent',
-      icon: Building2,
-      path: '/services/ground-rent',
-      color: 'from-[#0f3d5c] to-[#0d6e5d]',
-    },
-    {
-      name: 'Survey Plan',
-      description: 'Request official survey plans',
-      icon: MapPin,
-      path: '/services/survey-plan',
-      color: 'from-[#c9a961] to-[#8b6947]',
-    },
-  ];
 
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-[#faf8f5] pb-24">
+    <div className="min-h-screen bg-[#faf8f5] pb-20 lg:pb-6">
       {/* Header */}
-      <header className="bg-gradient-to-br from-[#0f3d5c] to-[#0d6e5d] pt-4 pb-20 px-4 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-[#c9a961]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-6">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-            >
+      <header className="bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3d5c] pt-4 pb-8 px-4 lg:px-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-60 h-60 bg-[#c9a961]/10 rounded-full blur-[100px]" />
+        <div className="relative max-w-2xl mx-auto">
+          <div className="flex items-center gap-4 mb-6">
+            <button onClick={() => navigate(-1)} className="p-2.5 hover:bg-white/10 rounded-xl">
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
             <div>
-              <h1 className="font-serif text-white text-xl font-bold">Document Verification</h1>
-              <p className="text-white/70 text-xs">Verify authenticity of land documents</p>
+              <div className="flex items-center gap-2 mb-1">
+                <Shield className="w-5 h-5 text-[#c9a961]" />
+                <h1 className="text-white font-serif text-xl font-bold">Document Verification</h1>
+              </div>
+              <p className="text-white/50 text-sm">Verify authenticity of land documents</p>
             </div>
           </div>
 
-          {/* Search Box */}
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/20">
-            <div className="flex gap-2">
-              <div className="flex-1 relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
+          {/* Search Form */}
+          <form onSubmit={handleVerify} className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-white/10">
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
                 <input
                   type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  placeholder="Enter document number (e.g., COO-2024-001234)"
-                  className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 text-sm focus:outline-none focus:border-white/40 focus:ring-2 focus:ring-white/20"
+                  value={documentNumber}
+                  onChange={(e) => setDocumentNumber(e.target.value)}
+                  placeholder="Enter document number (e.g., COO-2024-001)"
+                  className="w-full pl-12 pr-4 py-4 bg-white/10 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-[#c9a961]"
                 />
               </div>
               <button
-                onClick={handleSearch}
-                disabled={isSearching}
-                className="px-6 py-3 bg-gradient-to-r from-[#c9a961] to-[#8b6947] rounded-xl text-white font-semibold shadow-lg disabled:opacity-70 flex items-center gap-2"
+                type="submit"
+                disabled={loading}
+                className="px-6 bg-gradient-to-r from-[#c9a961] to-[#8b6947] text-white rounded-xl font-semibold disabled:opacity-50 flex items-center gap-2"
               >
-                {isSearching ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <Search className="w-5 h-5" />
+                  'Verify'
                 )}
               </button>
             </div>
-            <p className="text-white/50 text-xs mt-2">
-              Try: COO-2024-001234, DOA-2023-005678, or GC-2022-009999
-            </p>
-          </div>
+          </form>
         </div>
       </header>
 
-      {/* Main Content - Pulled up */}
-      <div className="px-4 -mt-8 relative z-10 space-y-6">
-        {/* Search Result */}
-        {hasSearched && (
-          <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-[#c9a961]/20 shadow-xl overflow-hidden">
-            {isSearching ? (
-              <div className="p-8 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 border-4 border-[#c9a961] border-t-transparent rounded-full animate-spin" />
-                <p className="text-[#8b6947]">Verifying document...</p>
-              </div>
-            ) : searchResult ? (
-              <>
-                {/* Status Banner */}
-                <div
-                  className={`px-4 py-3 flex items-center gap-3 ${
-                    searchResult.status === 'valid'
-                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-600'
-                      : searchResult.status === 'expired'
-                      ? 'bg-gradient-to-r from-amber-500 to-amber-600'
-                      : 'bg-gradient-to-r from-rose-500 to-rose-600'
-                  }`}
-                >
-                  {(() => {
-                    const StatusIcon = getStatusIcon(searchResult.status);
-                    return <StatusIcon className="w-6 h-6 text-white" />;
-                  })()}
-                  <div>
-                    <p className="text-white font-bold">
-                      Document {searchResult.status.charAt(0).toUpperCase() + searchResult.status.slice(1)}
-                    </p>
-                    <p className="text-white/80 text-xs">
-                      {searchResult.status === 'valid'
-                        ? 'This document is authentic and valid'
-                        : searchResult.status === 'expired'
-                        ? 'This document has expired'
-                        : 'This document could not be verified'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Document Details */}
-                <div className="p-4 space-y-4">
-                  <div className="flex items-center gap-3 pb-4 border-b border-[#c9a961]/20">
-                    <div className="w-12 h-12 bg-gradient-to-br from-[#0f3d5c]/10 to-[#0d6e5d]/10 rounded-xl flex items-center justify-center">
-                      <FileText className="w-6 h-6 text-[#0d6e5d]" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-[#0a2540]">{searchResult.documentType}</p>
-                      <p className="text-xs text-[#8b6947]">{searchResult.documentId}</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <User className="w-4 h-4 text-[#c9a961] mt-0.5" />
-                      <div>
-                        <p className="text-xs text-[#8b6947]">Owner Name</p>
-                        <p className="text-sm font-medium text-[#0a2540]">{searchResult.ownerName}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-4 h-4 text-[#c9a961] mt-0.5" />
-                      <div>
-                        <p className="text-xs text-[#8b6947]">Property Address</p>
-                        <p className="text-sm font-medium text-[#0a2540]">{searchResult.propertyAddress}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <Hash className="w-4 h-4 text-[#c9a961] mt-0.5" />
-                      <div>
-                        <p className="text-xs text-[#8b6947]">Registration Number</p>
-                        <p className="text-sm font-medium text-[#0a2540]">{searchResult.registrationNumber}</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex items-start gap-3">
-                        <Calendar className="w-4 h-4 text-[#c9a961] mt-0.5" />
-                        <div>
-                          <p className="text-xs text-[#8b6947]">Issue Date</p>
-                          <p className="text-sm font-medium text-[#0a2540]">
-                            {new Date(searchResult.issueDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <Clock className="w-4 h-4 text-[#c9a961] mt-0.5" />
-                        <div>
-                          <p className="text-xs text-[#8b6947]">Expiry Date</p>
-                          <p className="text-sm font-medium text-[#0a2540]">
-                            {new Date(searchResult.expiryDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-4 border-t border-[#c9a961]/20">
-                    <button className="flex-1 py-3 bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d] rounded-xl text-white font-medium text-sm flex items-center justify-center gap-2">
-                      <Download className="w-4 h-4" />
-                      Download Report
-                    </button>
-                    <button className="flex-1 py-3 bg-[#faf8f5] border border-[#c9a961]/20 rounded-xl text-[#8b6947] font-medium text-sm flex items-center justify-center gap-2">
-                      <Eye className="w-4 h-4" />
-                      View Details
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="p-8 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-rose-100 rounded-2xl flex items-center justify-center">
-                  <XCircle className="w-8 h-8 text-rose-500" />
-                </div>
-                <h3 className="font-serif text-[#0a2540] font-bold mb-2">Document Not Found</h3>
-                <p className="text-sm text-[#8b6947]">
-                  No document matches the number "{searchQuery}". Please check and try again.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Quick Services */}
-        <div>
-          <h3 className="font-serif text-[#0a2540] font-bold mb-3 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#c9a961]" />
-            Government Services
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            {services.map((service) => {
-              const Icon = service.icon;
-              return (
-                <button
-                  key={service.path}
-                  onClick={() => navigate(service.path)}
-                  className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-lg hover:shadow-xl transition-all text-left group"
-                >
-                  <div
-                    className={`w-10 h-10 bg-gradient-to-r ${service.color} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}
-                  >
-                    <Icon className="w-5 h-5 text-white" />
-                  </div>
-                  <h4 className="font-semibold text-[#0a2540] text-sm mb-1">{service.name}</h4>
-                  <p className="text-xs text-[#8b6947]">{service.description}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Info Card */}
-        <div className="bg-gradient-to-r from-[#c9a961]/10 to-[#8b6947]/5 rounded-2xl p-4 border border-[#c9a961]/20 flex gap-3">
-          <Shield className="w-5 h-5 text-[#c9a961] flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-[#0a2540]">Secure Verification</p>
-            <p className="text-xs text-[#8b6947]">
-              All document verifications are processed securely and logged for audit purposes.
-              Only authorized documents are recognized by this system.
-            </p>
-          </div>
-        </div>
-
-        {/* Recent Verifications */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 border border-[#c9a961]/20 shadow-xl">
-          <h3 className="font-serif text-[#0a2540] font-bold mb-3">Recent Verifications</h3>
-          <div className="space-y-3">
-            {[
-              { id: 'COO-2024-001234', type: 'Certificate of Occupancy', status: 'valid', date: 'Today' },
-              { id: 'DOA-2023-005678', type: 'Deed of Assignment', status: 'valid', date: 'Yesterday' },
-              { id: 'GC-2022-009999', type: "Governor's Consent", status: 'expired', date: '2 days ago' },
-            ].map((item, index) => (
+      <div className="px-4 lg:px-8 py-6 max-w-2xl mx-auto -mt-4">
+        {/* Demo Documents */}
+        <div className="bg-white rounded-2xl p-4 border border-[#c9a961]/20 shadow-lg mb-6">
+          <p className="text-[#8b6947] text-sm mb-3">Try these demo document numbers:</p>
+          <div className="flex flex-wrap gap-2">
+            {['COO-2024-001', 'GC-2023-045', 'SP-2024-012'].map((num) => (
               <button
-                key={index}
-                onClick={() => {
-                  setSearchQuery(item.id);
-                  handleSearch();
-                }}
-                className="w-full flex items-center justify-between p-3 bg-[#faf8f5] rounded-xl hover:bg-[#c9a961]/10 transition-colors"
+                key={num}
+                onClick={() => setDocumentNumber(num)}
+                className="px-3 py-1.5 bg-[#faf8f5] rounded-lg text-[#1a1a2e] text-sm font-mono hover:bg-[#c9a961]/10 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-[#0f3d5c]/10 to-[#0d6e5d]/10 rounded-lg flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-[#0d6e5d]" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm font-medium text-[#0a2540]">{item.id}</p>
-                    <p className="text-xs text-[#8b6947]">{item.type}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.status)}`}
-                  >
-                    {item.status}
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-[#8b6947]" />
-                </div>
+                {num}
               </button>
             ))}
           </div>
         </div>
+
+        {/* Error */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 flex items-center gap-3">
+            <XCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
+            <p className="text-red-700">{error}</p>
+          </div>
+        )}
+
+        {/* Result */}
+        {result && (
+          <div className="bg-white rounded-2xl border border-[#c9a961]/20 shadow-lg overflow-hidden animate-fade-in">
+            {/* Status Banner */}
+            <div className={`p-4 ${getStatusDisplay(result.status).bg} flex items-center gap-3`}>
+              {(() => {
+                const StatusIcon = getStatusDisplay(result.status).icon;
+                return <StatusIcon className={`w-8 h-8 ${getStatusDisplay(result.status).color}`} />;
+              })()}
+              <div>
+                <p className={`font-bold ${getStatusDisplay(result.status).color}`}>
+                  {getStatusDisplay(result.status).label}
+                </p>
+                <p className="text-sm opacity-70">{result.documentType}</p>
+              </div>
+            </div>
+
+            {/* Details */}
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[#8b6947] text-sm">Registration Number</p>
+                  <p className="text-[#1a1a2e] font-mono font-medium">{result.registrationNumber}</p>
+                </div>
+                <div>
+                  <p className="text-[#8b6947] text-sm">Issue Date</p>
+                  <p className="text-[#1a1a2e] font-medium">{new Date(result.issueDate).toLocaleDateString('en-NG', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-[#c9a961]/10">
+                <p className="text-[#8b6947] text-sm mb-1">Property Owner</p>
+                <p className="text-[#1a1a2e] font-semibold text-lg">{result.owner}</p>
+              </div>
+
+              <div>
+                <p className="text-[#8b6947] text-sm mb-1">Property Location</p>
+                <p className="text-[#1a1a2e] font-medium">{result.location}</p>
+              </div>
+
+              {result.status === 'valid' && (
+                <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl border border-green-200">
+                  <Shield className="w-5 h-5 text-green-600" />
+                  <p className="text-green-700 text-sm">This document is authentic and registered with the Enugu State Land Registry.</p>
+                </div>
+              )}
+
+              {result.status === 'pending' && (
+                <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                  <p className="text-amber-700 text-sm">This document is currently being processed. Please check back later.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="p-4 bg-[#faf8f5] border-t border-[#c9a961]/10 flex gap-3">
+              <button className="flex-1 py-3 bg-white border border-[#c9a961]/20 rounded-xl text-[#1a1a2e] font-medium flex items-center justify-center gap-2">
+                <FileText className="w-4 h-4" /> Download Report
+              </button>
+              <button className="py-3 px-4 bg-[#1a1a2e] rounded-xl text-white">
+                <QrCode className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Info Cards */}
+        {!result && !error && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl p-5 border border-[#c9a961]/20 shadow-lg">
+              <h3 className="text-[#1a1a2e] font-serif font-bold mb-3">What can you verify?</h3>
+              <div className="space-y-3">
+                {[
+                  { icon: FileText, label: 'Certificate of Occupancy (C of O)' },
+                  { icon: Shield, label: "Governor's Consent" },
+                  { icon: Crown, label: 'Survey Plans' },
+                  { icon: Upload, label: 'Deed of Assignment' },
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[#faf8f5] rounded-xl flex items-center justify-center">
+                      <item.icon className="w-5 h-5 text-[#c9a961]" />
+                    </div>
+                    <span className="text-[#1a1a2e]">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-[#0d6e5d] to-[#064e3b] rounded-2xl p-5 text-white">
+              <h3 className="font-serif font-bold mb-2">Protect Yourself</h3>
+              <p className="text-white/70 text-sm">Always verify land documents before making any purchase to avoid fraud and ensure legitimate ownership.</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-[#c9a961]/20 px-4 py-2 z-30">
-        <div className="flex items-center justify-around max-w-md mx-auto">
+      {/* Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#c9a961]/10 px-4 py-2 z-30 lg:hidden">
+        <div className="flex items-center justify-around">
           {[
             { icon: Home, label: 'Home', path: '/dashboard' },
             { icon: Search, label: 'Search', path: '/search' },
@@ -432,35 +269,20 @@ const DocumentVerification = () => {
             { icon: Heart, label: 'Portfolio', path: '/portfolio' },
             { icon: User, label: 'Profile', path: '/settings' },
           ].map((item) => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className="flex flex-col items-center py-1"
-            >
-              <div
-                className={`p-2 rounded-xl transition-all ${
-                  isActive(item.path)
-                    ? 'bg-gradient-to-r from-[#0f3d5c] to-[#0d6e5d]'
-                    : ''
-                }`}
-              >
-                <item.icon
-                  className={`w-5 h-5 ${
-                    isActive(item.path) ? 'text-white' : 'text-[#8b6947]'
-                  }`}
-                />
+            <button key={item.path} onClick={() => navigate(item.path)} className="flex flex-col items-center py-1">
+              <div className={`p-2 rounded-xl ${isActive(item.path) ? 'bg-gradient-to-r from-[#1a1a2e] to-[#0f3d5c]' : ''}`}>
+                <item.icon className={`w-5 h-5 ${isActive(item.path) ? 'text-white' : 'text-[#8b6947]'}`} />
               </div>
-              <span
-                className={`text-[10px] font-medium ${
-                  isActive(item.path) ? 'text-[#0f3d5c]' : 'text-[#8b6947]'
-                }`}
-              >
-                {item.label}
-              </span>
+              <span className={`text-[10px] ${isActive(item.path) ? 'text-[#1a1a2e] font-medium' : 'text-[#8b6947]'}`}>{item.label}</span>
             </button>
           ))}
         </div>
       </nav>
+
+      <style>{`
+        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fade-in 0.3s ease-out; }
+      `}</style>
     </div>
   );
 };

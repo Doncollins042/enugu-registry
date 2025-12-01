@@ -1,434 +1,205 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Home, LogOut, Bell, Download, FileText, Printer, Calendar, ArrowLeft, CheckCircle, File, Table, BarChart3 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft, Download, FileText, Calendar, TrendingUp, DollarSign, MapPin, Filter, ChevronDown, Home, Search, Building2, Heart, User, Crown, Printer } from 'lucide-react';
 
-interface ReportsProps {
-  user: any;
-  onLogout: () => void;
-  properties: any[];
-}
-
-export default function Reports({ user, onLogout, properties }: ReportsProps) {
+const Reports = () => {
   const navigate = useNavigate();
-  const [reportType, setReportType] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [reportGenerated, setReportGenerated] = useState(false);
-  const [generatedReport, setGeneratedReport] = useState<any>(null);
-  const [dateRange, setDateRange] = useState({
-    from: '',
-    to: '',
-  });
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState('transactions');
+  const [dateRange, setDateRange] = useState('all');
 
-  const reportTypes = [
-    { 
-      id: 'portfolio', 
-      name: 'Property Portfolio Report', 
-      desc: 'Complete overview of all your properties with valuations',
-      icon: Home,
-      color: 'bg-blue-50 text-blue-600'
-    },
-    { 
-      id: 'transactions', 
-      name: 'Transaction History', 
-      desc: 'Detailed payment and purchase records',
-      icon: Table,
-      color: 'bg-emerald-50 text-emerald-600'
-    },
-    { 
-      id: 'certificates', 
-      name: 'Property Certificates', 
-      desc: 'Download all ownership documents and certificates',
-      icon: FileText,
-      color: 'bg-purple-50 text-purple-600'
-    },
-    { 
-      id: 'tax', 
-      name: 'Tax Summary Report', 
-      desc: 'Ground rent and tax payment history',
-      icon: BarChart3,
-      color: 'bg-amber-50 text-amber-600'
-    },
+  const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+  const portfolio = JSON.parse(localStorage.getItem('portfolio') || '[]');
+
+  const formatPrice = (amount: number) => {
+    return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount);
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('en-NG', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const totalInvestment = portfolio.reduce((sum: number, p: any) => sum + (p.price || 0), 0);
+  const totalPlots = portfolio.length;
+
+  const stats = [
+    { label: 'Total Investment', value: formatPrice(totalInvestment), icon: DollarSign, color: 'from-[#0d6e5d] to-[#064e3b]' },
+    { label: 'Properties Owned', value: totalPlots.toString(), icon: MapPin, color: 'from-[#c9a961] to-[#8b6947]' },
+    { label: 'Transactions', value: transactions.length.toString(), icon: TrendingUp, color: 'from-[#1a1a2e] to-[#0f3d5c]' },
   ];
 
-  const handleGenerateReport = () => {
-    if (!reportType) {
-      toast.error('Please select a report type');
-      return;
-    }
-
-    setGenerating(true);
-    toast.loading('Generating your report...', { id: 'report' });
-
-    setTimeout(() => {
-      toast.dismiss('report');
-      setGenerating(false);
-      setReportGenerated(true);
-
-      const selectedReport = reportTypes.find(r => r.id === reportType);
-      setGeneratedReport({
-        id: `RPT-${Date.now()}`,
-        type: selectedReport?.name,
-        generatedAt: new Date().toLocaleString(),
-        recordCount: reportType === 'portfolio' ? properties.length : Math.floor(Math.random() * 20) + 5,
-        fileSize: `${(Math.random() * 2 + 0.5).toFixed(1)} MB`,
-        dateRange: dateRange.from && dateRange.to 
-          ? `${new Date(dateRange.from).toLocaleDateString()} - ${new Date(dateRange.to).toLocaleDateString()}`
-          : 'All Time'
-      });
-
-      toast.success('Report generated successfully!');
-    }, 2500);
-  };
-
-  const handleDownload = (format: string) => {
-    if (!reportGenerated) {
-      toast.error('Please generate a report first');
-      return;
-    }
-
-    toast.loading(`Preparing ${format.toUpperCase()} download...`, { id: 'download' });
-
-    setTimeout(() => {
-      toast.dismiss('download');
-      toast.success(`Report downloaded as ${format.toUpperCase()}`);
-    }, 1500);
-  };
-
-  const handlePrint = () => {
-    if (!reportGenerated) {
-      toast.error('Please generate a report first');
-      return;
-    }
-
-    toast.success('Opening print dialog...');
-    setTimeout(() => {
-      window.print();
-    }, 500);
-  };
-
-  const handleNewReport = () => {
-    setReportType('');
-    setReportGenerated(false);
-    setGeneratedReport(null);
-    setDateRange({ from: '', to: '' });
-  };
+  const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
-      {/* Blurred Background */}
-      <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-gray-50/98 to-white/95 z-10"></div>
-        <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1920&q=80" alt="Reports" className="w-full h-full object-cover opacity-20 blur-md" />
-      </div>
-
-      {/* Content */}
-      <div className="relative z-20">
-        {/* Header */}
-        <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-900 to-blue-700 rounded-lg flex items-center justify-center">
-                  <Home className="w-6 h-6 text-amber-400" />
-                </div>
-                <div>
-                  <h1 className="text-base font-bold text-gray-900">Enugu State Land Registry</h1>
-                  <p className="text-xs text-gray-600">Reports & Export</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                  <Bell className="w-5 h-5 text-gray-700" />
-                </button>
-                <button onClick={onLogout} className="p-2 hover:bg-gray-100 rounded-lg transition-all">
-                  <LogOut className="w-5 h-5 text-gray-700" />
-                </button>
+    <div className="min-h-screen bg-[#faf8f5] pb-20 lg:pb-6">
+      {/* Header */}
+      <header className="bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3d5c] pt-4 pb-6 px-4 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <button onClick={() => navigate(-1)} className="p-2.5 hover:bg-white/10 rounded-xl">
+                <ArrowLeft className="w-5 h-5 text-white" />
+              </button>
+              <div>
+                <h1 className="text-white font-serif text-xl font-bold">Reports & Analytics</h1>
+                <p className="text-white/50 text-sm">View your investment reports</p>
               </div>
             </div>
-          </div>
-        </header>
-
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-          <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 text-sm">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
-          </button>
-
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Reports & Export</h1>
-            <p className="text-sm text-gray-600">Generate and download property reports and documents</p>
+            <button className="p-2.5 bg-white/10 rounded-xl hover:bg-white/20">
+              <Printer className="w-5 h-5 text-white" />
+            </button>
           </div>
 
-          {!reportGenerated ? (
-            <div className="grid lg:grid-cols-3 gap-6">
-              {/* Report Configuration */}
-              <div className="lg:col-span-2">
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm">
-                  <h2 className="text-lg font-bold text-gray-900 mb-6">Generate Report</h2>
-
-                  <div className="space-y-6">
-                    {/* Report Type Selection */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">Select Report Type *</label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {reportTypes.map((type) => (
-                          <button
-                            key={type.id}
-                            onClick={() => setReportType(type.id)}
-                            disabled={generating}
-                            className={`p-4 border-2 rounded-lg transition-all text-left ${
-                              reportType === type.id 
-                                ? 'border-blue-900 bg-blue-50' 
-                                : 'border-gray-200 hover:border-gray-300'
-                            } ${generating ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${type.color}`}>
-                              <type.icon className="w-5 h-5" />
-                            </div>
-                            <p className="text-sm font-bold text-gray-900 mb-1">{type.name}</p>
-                            <p className="text-xs text-gray-600">{type.desc}</p>
-                            {reportType === type.id && (
-                              <div className="mt-3 pt-3 border-t border-gray-200">
-                                <span className="text-xs font-medium text-blue-900 bg-blue-100 px-2 py-1 rounded-full">
-                                  ✓ Selected
-                                </span>
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Date Range */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Date Range (Optional)</label>
-                      <p className="text-xs text-gray-500 mb-3">Leave empty to include all records</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">From</label>
-                          <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <input
-                              type="date"
-                              value={dateRange.from}
-                              onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
-                              disabled={generating}
-                              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">To</label>
-                          <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <input
-                              type="date"
-                              value={dateRange.to}
-                              onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
-                              disabled={generating}
-                              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:opacity-50"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={handleGenerateReport}
-                      disabled={!reportType || generating}
-                      className="w-full py-3 bg-blue-900 text-white rounded-lg font-semibold hover:bg-blue-800 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {generating ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Generating Report...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="w-5 h-5" />
-                          Generate Report
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-3">
+            {stats.map((stat, idx) => (
+              <div key={idx} className={`bg-gradient-to-br ${stat.color} rounded-xl p-4`}>
+                <stat.icon className="w-6 h-6 text-white/50 mb-2" />
+                <p className="text-white font-bold text-lg lg:text-xl">{stat.value}</p>
+                <p className="text-white/60 text-xs">{stat.label}</p>
               </div>
-
-              {/* Quick Stats Sidebar */}
-              <div className="lg:col-span-1">
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm sticky top-24">
-                  <h3 className="text-base font-bold text-gray-900 mb-4">Your Data Summary</h3>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Home className="w-5 h-5 text-blue-600" />
-                        <span className="text-sm text-gray-700">Properties Owned</span>
-                      </div>
-                      <span className="text-lg font-bold text-gray-900">{properties.length}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-purple-600" />
-                        <span className="text-sm text-gray-700">Documents</span>
-                      </div>
-                      <span className="text-lg font-bold text-gray-900">{properties.length * 3}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Table className="w-5 h-5 text-emerald-600" />
-                        <span className="text-sm text-gray-700">Transactions</span>
-                      </div>
-                      <span className="text-lg font-bold text-gray-900">{properties.length + 5}</span>
-                    </div>
-
-                    <div className="pt-4 border-t border-gray-200">
-                      <p className="text-sm text-gray-700 mb-2">Total Portfolio Value</p>
-                      <p className="text-2xl font-bold text-emerald-600">
-                        ₦{properties.reduce((sum, p) => sum + (p.price || 0), 0).toLocaleString() || '0'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="grid lg:grid-cols-3 gap-6">
-              {/* Generated Report */}
-              <div className="lg:col-span-2">
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm">
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 bg-emerald-100 rounded-lg flex items-center justify-center">
-                      <CheckCircle className="w-10 h-10 text-emerald-600" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900">Report Generated Successfully!</h2>
-                      <p className="text-sm text-gray-600">Your report is ready for download</p>
-                    </div>
-                  </div>
-
-                  {/* Report Details */}
-                  <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                    <h3 className="text-sm font-bold text-gray-900 mb-4">Report Details</h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between py-2 border-b border-gray-200">
-                        <span className="text-sm text-gray-600">Report ID:</span>
-                        <span className="text-sm font-mono font-bold text-gray-900">{generatedReport?.id}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-gray-200">
-                        <span className="text-sm text-gray-600">Report Type:</span>
-                        <span className="text-sm text-gray-900">{generatedReport?.type}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-gray-200">
-                        <span className="text-sm text-gray-600">Generated At:</span>
-                        <span className="text-sm text-gray-900">{generatedReport?.generatedAt}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-gray-200">
-                        <span className="text-sm text-gray-600">Date Range:</span>
-                        <span className="text-sm text-gray-900">{generatedReport?.dateRange}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-gray-200">
-                        <span className="text-sm text-gray-600">Records Included:</span>
-                        <span className="text-sm text-gray-900">{generatedReport?.recordCount}</span>
-                      </div>
-                      <div className="flex justify-between py-2">
-                        <span className="text-sm text-gray-600">File Size:</span>
-                        <span className="text-sm text-gray-900">{generatedReport?.fileSize}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Report Preview */}
-                  <div className="bg-gray-100 rounded-lg p-8 mb-6 border-2 border-dashed border-gray-300">
-                    <div className="text-center">
-                      <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                      <p className="text-sm font-medium text-gray-900 mb-1">{generatedReport?.type}</p>
-                      <p className="text-xs text-gray-500">Preview not available - Download to view full report</p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleNewReport}
-                    className="w-full py-3 bg-gray-100 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-all text-sm"
-                  >
-                    Generate Another Report
-                  </button>
-                </div>
-              </div>
-
-              {/* Export Options */}
-              <div className="lg:col-span-1">
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6 shadow-sm sticky top-24">
-                  <h3 className="text-base font-bold text-gray-900 mb-4">Export Options</h3>
-                  
-                  <div className="space-y-3 mb-6">
-                    <button
-                      onClick={() => handleDownload('pdf')}
-                      className="w-full flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-all"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Download className="w-5 h-5 text-red-600" />
-                        <div className="text-left">
-                          <p className="text-sm font-medium text-gray-900">Download PDF</p>
-                          <p className="text-xs text-gray-600">Best for printing</p>
-                        </div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => handleDownload('excel')}
-                      className="w-full flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-all"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Download className="w-5 h-5 text-emerald-600" />
-                        <div className="text-left">
-                          <p className="text-sm font-medium text-gray-900">Download Excel</p>
-                          <p className="text-xs text-gray-600">Editable spreadsheet</p>
-                        </div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => handleDownload('csv')}
-                      className="w-full flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Download className="w-5 h-5 text-blue-600" />
-                        <div className="text-left">
-                          <p className="text-sm font-medium text-gray-900">Download CSV</p>
-                          <p className="text-xs text-gray-600">Raw data format</p>
-                        </div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={handlePrint}
-                      className="w-full flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-all"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Printer className="w-5 h-5 text-purple-600" />
-                        <div className="text-left">
-                          <p className="text-sm font-medium text-gray-900">Print Report</p>
-                          <p className="text-xs text-gray-600">Physical copy</p>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-xs text-blue-900">
-                      <strong>Note:</strong> Downloaded reports contain official government seals and can be used for legal purposes.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
+      </header>
+
+      <div className="px-4 lg:px-8 py-6 max-w-5xl mx-auto">
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+          {[
+            { id: 'transactions', label: 'Transactions' },
+            { id: 'properties', label: 'Properties' },
+            { id: 'documents', label: 'Documents' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
+                activeTab === tab.id
+                  ? 'bg-[#1a1a2e] text-white'
+                  : 'bg-white text-[#8b6947] border border-[#c9a961]/20'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Filter */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-[#8b6947]" />
+            <select
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+              className="bg-white border border-[#c9a961]/20 rounded-lg px-3 py-2 text-sm text-[#1a1a2e] focus:outline-none"
+            >
+              <option value="all">All Time</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2 bg-[#c9a961] text-white rounded-lg text-sm font-medium">
+            <Download className="w-4 h-4" /> Export
+          </button>
+        </div>
+
+        {/* Content */}
+        {activeTab === 'transactions' && (
+          <div className="bg-white rounded-2xl border border-[#c9a961]/20 shadow-lg overflow-hidden">
+            {transactions.length > 0 ? (
+              <div className="divide-y divide-[#c9a961]/10">
+                {transactions.map((txn: any, idx: number) => (
+                  <div key={idx} className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-[#0d6e5d]/10 rounded-xl flex items-center justify-center">
+                        <TrendingUp className="w-6 h-6 text-[#0d6e5d]" />
+                      </div>
+                      <div>
+                        <p className="text-[#1a1a2e] font-medium">{txn.plotNumber} - {txn.estateName}</p>
+                        <p className="text-[#8b6947] text-sm">ID: {txn.id}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[#0d6e5d] font-bold">{formatPrice(txn.amount)}</p>
+                      <p className="text-[#8b6947] text-sm">{formatDate(txn.date)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center">
+                <FileText className="w-12 h-12 text-[#c9a961]/30 mx-auto mb-4" />
+                <p className="text-[#8b6947]">No transactions yet</p>
+                <button onClick={() => navigate('/search')} className="mt-4 px-6 py-2 bg-[#c9a961] text-white rounded-lg text-sm">
+                  Browse Properties
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'properties' && (
+          <div className="bg-white rounded-2xl border border-[#c9a961]/20 shadow-lg overflow-hidden">
+            {portfolio.length > 0 ? (
+              <div className="divide-y divide-[#c9a961]/10">
+                {portfolio.map((prop: any, idx: number) => (
+                  <div key={idx} className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-[#c9a961] to-[#8b6947] rounded-xl flex items-center justify-center">
+                        <Crown className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-[#1a1a2e] font-medium">{prop.number}</p>
+                        <p className="text-[#8b6947] text-sm">{prop.estateName} • {prop.sqm} m²</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[#0d6e5d] font-bold">{formatPrice(prop.price)}</p>
+                      <p className="text-[#8b6947] text-sm">{prop.tier}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center">
+                <MapPin className="w-12 h-12 text-[#c9a961]/30 mx-auto mb-4" />
+                <p className="text-[#8b6947]">No properties yet</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'documents' && (
+          <div className="bg-white rounded-2xl border border-[#c9a961]/20 shadow-lg p-12 text-center">
+            <FileText className="w-12 h-12 text-[#c9a961]/30 mx-auto mb-4" />
+            <p className="text-[#8b6947]">Documents will appear here after purchase</p>
+          </div>
+        )}
       </div>
+
+      {/* Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#c9a961]/10 px-4 py-2 z-30 lg:hidden">
+        <div className="flex items-center justify-around">
+          {[
+            { icon: Home, label: 'Home', path: '/dashboard' },
+            { icon: Search, label: 'Search', path: '/search' },
+            { icon: Building2, label: 'Services', path: '/services/document-verification' },
+            { icon: Heart, label: 'Portfolio', path: '/portfolio' },
+            { icon: User, label: 'Profile', path: '/settings' },
+          ].map((item) => (
+            <button key={item.path} onClick={() => navigate(item.path)} className="flex flex-col items-center py-1">
+              <div className={`p-2 rounded-xl ${isActive(item.path) ? 'bg-gradient-to-r from-[#1a1a2e] to-[#0f3d5c]' : ''}`}>
+                <item.icon className={`w-5 h-5 ${isActive(item.path) ? 'text-white' : 'text-[#8b6947]'}`} />
+              </div>
+              <span className={`text-[10px] ${isActive(item.path) ? 'text-[#1a1a2e] font-medium' : 'text-[#8b6947]'}`}>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
-}
+};
+
+export default Reports;
